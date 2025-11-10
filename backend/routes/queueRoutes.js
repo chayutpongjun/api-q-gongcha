@@ -7,6 +7,79 @@ const databaseService = require('../services/databaseService');
 // JWT Secret (ในการใช้งานจริงควรเก็บใน environment variables)
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
+// Connection pool cache
+const connectionPools = new Map();
+
+// Helper function: Parse server and port
+const parseServerAndPort = (serverString) => {
+  const parts = serverString.split(',');
+  if (parts.length === 2) {
+    return {
+      server: parts[0].trim(),
+      port: parseInt(parts[1].trim()) || 1433
+    };
+  }
+  return {
+    server: serverString.trim(),
+    port: 1433
+  };
+};
+
+// Helper function: Get or create connection pool with timeout
+async function getConnectionPool(serverInfo, RestDBName, RestUserName, RestPassword) {
+  const poolKey = `${serverInfo.server}_${serverInfo.port}_${RestDBName}`;
+
+  // Return existing pool if available and connected
+  if (connectionPools.has(poolKey)) {
+    const existingPool = connectionPools.get(poolKey);
+    if (existingPool.connected) {
+      console.log(`♻️  Reusing existing connection pool for ${poolKey}`);
+      return existingPool;
+    } else {
+      connectionPools.delete(poolKey);
+    }
+  }
+
+  // Create new pool with optimized settings
+  const dbConfig = {
+    server: serverInfo.server,
+    port: serverInfo.port,
+    database: RestDBName,
+    user: RestUserName,
+    password: RestPassword,
+    options: {
+      encrypt: true,
+      trustServerCertificate: true,
+      enableArithAbort: true,
+      connectionTimeout: 10000,  // 10 seconds
+      requestTimeout: 20000      // 20 seconds
+    },
+    pool: {
+      max: 10,
+      min: 0,
+      idleTimeoutMillis: 30000
+    }
+  };
+
+  console.log(`🔌 Creating new connection pool for ${poolKey}...`);
+
+  try {
+    const pool = await Promise.race([
+      sql.connect(dbConfig),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timeout after 10s')), 10000)
+      )
+    ]);
+
+    connectionPools.set(poolKey, pool);
+    console.log(`✅ Connection pool created successfully`);
+    return pool;
+  } catch (error) {
+    console.error(`❌ Failed to create connection pool: ${error.message}`);
+    throw error;
+  }
+}
+
 // Login endpoint: Get restaurant config and return JWT token
 router.post('/login', async (req, res) => {
   try {
@@ -118,51 +191,11 @@ router.post('/execute-jwt', async (req, res) => {
     console.log(`📋 Using connection from JWT: ${RestServerName} -> ${RestDBName} (User: ${RestUserName})`);
     console.log(`📋 QueStatus parameter: ${queStatusValue}`);
 
-    // Parse server and port from RestServerName (format: server,port)
-    const parseServerAndPort = (serverString) => {
-      console.log(`🔍 Parsing server string: "${serverString}"`);
-      const parts = serverString.split(',');
-      if (parts.length === 2) {
-        const parsed = {
-          server: parts[0].trim(),
-          port: parseInt(parts[1].trim()) || 1433
-        };
-        console.log(`✅ Parsed server,port: ${parsed.server}:${parsed.port}`);
-        return parsed;
-      }
-      console.log(`⚠️  No port found, using default: ${serverString.trim()}:1433`);
-      return {
-        server: serverString.trim(),
-        port: 1433
-      };
-    };
-
     const serverInfo = parseServerAndPort(RestServerName);
-    console.log(`📋 Final connection details: ${serverInfo.server}:${serverInfo.port} -> ${RestDBName}`);
+    console.log(`📋 Connection: ${serverInfo.server}:${serverInfo.port} -> ${RestDBName}`);
 
-    // Create database configuration
-    const dbConfig = {
-      server: serverInfo.server,
-      port: serverInfo.port,
-      database: RestDBName,
-      user: RestUserName,
-      password: RestPassword,
-      options: {
-        encrypt: true,
-        trustServerCertificate: true,
-        enableArithAbort: true,
-        connectionTimeout: 100010,
-        requestTimeout: 100010
-      }
-    };
-
-    console.log(`📞 Connecting to: ${dbConfig.server}:${dbConfig.port} -> ${dbConfig.database}`);
-
-    // Connect to database
-    const sql = require('mssql');
-    const pool = await sql.connect(dbConfig);
-
-    console.log(`✅ Connected successfully!`);
+    // Get or create connection pool
+    const pool = await getConnectionPool(serverInfo, RestDBName, RestUserName, RestPassword);
 
     // Execute stored procedure [dbo].[Sp_TB_QueOrderStatus] with dynamic QueStatus
     console.log(`📞 Executing: [dbo].[Sp_TB_QueOrderStatus] '${queStatusValue}', 0`);
@@ -175,8 +208,7 @@ router.post('/execute-jwt', async (req, res) => {
 
     console.log(`✅ Stored procedure returned ${result.recordset?.length || 0} records`);
 
-    // Close connection
-    await pool.close();
+    // Keep pool open for reuse
 
     const responseData = {
       success: true,
@@ -389,8 +421,7 @@ router.post('/execute', async (req, res) => {
 
     console.log(`✅ Stored procedure returned ${result.recordset?.length || 0} records`);
 
-    // Close connection
-    await pool.close();
+    // Keep pool open for reuse
 
     // Return results
     res.json({
@@ -493,8 +524,7 @@ router.post('/execute-trnid', async (req, res) => {
 
     console.log(`✅ Stored procedure returned ${result.recordset?.length || 0} records`);
 
-    // Close connection
-    await pool.close();
+    // Keep pool open for reuse
 
     // Return results
     res.json({
@@ -634,8 +664,7 @@ router.post('/execute-kds', async (req, res) => {
 
     console.log(`✅ KDS stored procedure returned ${result.recordset?.length || 0} records`);
 
-    // Close connection
-    await pool.close();
+    // Keep pool open for reuse
 
     const responseData = {
       success: true,

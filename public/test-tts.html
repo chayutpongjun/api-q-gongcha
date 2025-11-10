@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบระบบเสียงคิว</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        audio {
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔊 ทดสอบระบบเสียงคิว</h1>
+
+        <div class="form-group">
+            <label for="queueNumber">หมายเลขคิว:</label>
+            <input type="text" id="queueNumber" placeholder="เช่น 750, 102, K123" value="750">
+        </div>
+
+        <div class="form-group">
+            <label for="queueText">ข้อความเต็ม:</label>
+            <input type="text" id="queueText" placeholder="เช่น คิว 750" value="คิว 750">
+        </div>
+
+        <div class="form-group">
+            <label for="force">โหลดใหม่:</label>
+            <select id="force">
+                <option value="Y">Y - โหลดใหม่ทุกครั้ง</option>
+                <option value="N">N - ใช้ไฟล์เดิม (ถ้ามี)</option>
+            </select>
+        </div>
+
+        <button onclick="testTTS()">🎵 สร้างเสียงคิว</button>
+        <button onclick="testWithNumber()" style="background: #2196F3;">🔢 ใช้หมายเลขคิวอย่างเดียว</button>
+
+        <div id="result" class="result"></div>
+        <div id="log" class="log" style="display:none;"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:10001/api/callQueue';
+
+        function addLog(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            const time = new Date().toLocaleTimeString('th-TH');
+            logDiv.innerHTML += `[${time}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function testTTS() {
+            const queueText = document.getElementById('queueText').value;
+            const force = document.getElementById('force').value;
+            const resultDiv = document.getElementById('result');
+
+            if (!queueText) {
+                alert('กรุณาใส่ข้อความ');
+                return;
+            }
+
+            addLog(`📤 ส่งคำขอ: queueText="${queueText}", force="${force}"`);
+            resultDiv.style.display = 'none';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ queueText, force })
+                });
+
+                addLog(`📥 ได้รับ response: status=${response.status}`);
+                const data = await response.json();
+                addLog(`📥 Response data: ${JSON.stringify(data)}`);
+
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = `
+                        <strong>✅ สำเร็จ!</strong><br>
+                        Audio URL: ${data.audioUrl}<br>
+                        Reloaded: ${data.reloaded ? 'ใช่' : 'ไม่'}<br>
+                        <audio controls autoplay>
+                            <source src="${data.audioUrl}" type="audio/mpeg">
+                        </audio>
+                    `;
+                    addLog(`✅ สร้างไฟล์เสียงสำเร็จ: ${data.audioUrl}`);
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            } catch (error) {
+                addLog(`❌ Error: ${error.message}`);
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `<strong>❌ เกิดข้อผิดพลาด:</strong><br>${error.message}`;
+            }
+        }
+
+        async function testWithNumber() {
+            const queueNumber = document.getElementById('queueNumber').value;
+            document.getElementById('queueText').value = `คิว ${queueNumber}`;
+            await testTTS();
+        }
+
+        // Auto-update queueText when queueNumber changes
+        document.getElementById('queueNumber').addEventListener('input', function (e) {
+            document.getElementById('queueText').value = `คิว ${e.target.value}`;
+        });
+    </script>
+</body>
+
+</html>

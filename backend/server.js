@@ -132,7 +132,9 @@ app.use('/tts', express.static(path.join(__dirname, '../public/tts')));
 // ✅ API: สร้างหรือใช้ไฟล์เสียงเดิมตาม option Y/N
 app.post("/api/callQueue", async (req, res) => {
   try {
+    console.log(`📥 [API] Request body:`, req.body);
     const { queueText, force } = req.body;
+    console.log(`📥 [API] queueText="${queueText}", force="${force}"`);
     if (!queueText) return res.status(400).json({ error: "Missing queueText" });
 
     // default = "N" ถ้าไม่ได้ส่งมา
