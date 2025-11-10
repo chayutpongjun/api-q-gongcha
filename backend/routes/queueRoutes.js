@@ -11,21 +11,21 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 router.post('/login', async (req, res) => {
   try {
     const { RestID } = req.body;
-    
+
     if (!RestID) {
-      return res.status(400).json({ 
-        error: 'RestID is required' 
+      return res.status(400).json({
+        error: 'RestID is required'
       });
     }
 
     console.log(`🔑 Login request for Restaurant ID: ${RestID}`);
-    
+
     // Get restaurant configuration from Main DB
     const mainPool = await databaseService.initializeMainDb();
-    
+
     const request = mainPool.request();
     request.input('RestId', require('mssql').VarChar, RestID);
-    
+
     const configResult = await request.query(`
       SELECT [RestID],
              [RestName],
@@ -38,14 +38,14 @@ router.post('/login', async (req, res) => {
     `);
 
     if (configResult.recordset.length === 0) {
-      return res.status(404).json({ 
-        error: `Restaurant with ID ${RestID} not found` 
+      return res.status(404).json({
+        error: `Restaurant with ID ${RestID} not found`
       });
     }
 
     const restConfig = configResult.recordset[0];
     console.log(`✅ Found restaurant: ${restConfig.RestName}`);
-    
+
     // Create JWT payload with restaurant connection details
     const payload = {
       RestID: restConfig.RestID,
@@ -57,12 +57,12 @@ router.post('/login', async (req, res) => {
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
     };
-    
+
     // Generate JWT token
     const token = jwt.sign(payload, JWT_SECRET);
-    
+
     console.log(`🎫 JWT token generated for ${restConfig.RestName}`);
-    
+
     res.json({
       success: true,
       data: {
@@ -75,10 +75,10 @@ router.post('/login', async (req, res) => {
       },
       timestamp: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error('Error in login:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to login',
       message: error.message,
       details: error.stack
@@ -90,34 +90,34 @@ router.post('/login', async (req, res) => {
 router.post('/execute-jwt', async (req, res) => {
   try {
     const { token, QueStatus } = req.body;
-    
+
     if (!token) {
-      return res.status(400).json({ 
-        error: 'JWT token is required' 
+      return res.status(400).json({
+        error: 'JWT token is required'
       });
     }
 
     console.log(`🔓 Executing with JWT token...`);
-    
+
     // Verify and decode JWT token
     let decoded;
     try {
       decoded = jwt.verify(token, JWT_SECRET);
       console.log(`✅ JWT token verified for restaurant: ${decoded.RestName}`);
     } catch (jwtError) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'Invalid or expired token',
         message: jwtError.message
       });
     }
-    
+
     // Extract connection details from JWT payload
     const { RestServerName, RestDBName, RestUserName, RestPassword } = decoded;
     const queStatusValue = QueStatus || 'ALL';
-    
+
     console.log(`📋 Using connection from JWT: ${RestServerName} -> ${RestDBName} (User: ${RestUserName})`);
     console.log(`📋 QueStatus parameter: ${queStatusValue}`);
-    
+
     // Parse server and port from RestServerName (format: server,port)
     const parseServerAndPort = (serverString) => {
       console.log(`🔍 Parsing server string: "${serverString}"`);
@@ -139,7 +139,7 @@ router.post('/execute-jwt', async (req, res) => {
 
     const serverInfo = parseServerAndPort(RestServerName);
     console.log(`📋 Final connection details: ${serverInfo.server}:${serverInfo.port} -> ${RestDBName}`);
-    
+
     // Create database configuration
     const dbConfig = {
       server: serverInfo.server,
@@ -151,33 +151,33 @@ router.post('/execute-jwt', async (req, res) => {
         encrypt: true,
         trustServerCertificate: true,
         enableArithAbort: true,
-        connectionTimeout: 100000,
-        requestTimeout: 100000
+        connectionTimeout: 100010,
+        requestTimeout: 100010
       }
     };
 
     console.log(`📞 Connecting to: ${dbConfig.server}:${dbConfig.port} -> ${dbConfig.database}`);
-    
+
     // Connect to database
     const sql = require('mssql');
     const pool = await sql.connect(dbConfig);
-    
+
     console.log(`✅ Connected successfully!`);
-    
+
     // Execute stored procedure [dbo].[Sp_TB_QueOrderStatus] with dynamic QueStatus
     console.log(`📞 Executing: [dbo].[Sp_TB_QueOrderStatus] '${queStatusValue}', 0`);
-    
+
     const request = pool.request();
     request.input('QueStatus', sql.VarChar(50), queStatusValue);
     request.input('ZoneID', sql.Int, 0);
-    
+
     const result = await request.execute('[dbo].[Sp_TB_QueOrderStatus]');
-    
+
     console.log(`✅ Stored procedure returned ${result.recordset?.length || 0} records`);
-    
+
     // Close connection
     await pool.close();
-    
+
     const responseData = {
       success: true,
       data: {
@@ -207,22 +207,22 @@ router.post('/execute-jwt', async (req, res) => {
         type: 'queueUpdate',
         data: responseData.data
       });
-      
+
       connections.forEach(ws => {
         if (ws.readyState === 1) { // WebSocket.OPEN
           ws.send(message);
         }
       });
-      
+
       console.log(`📡 Broadcasting queue update to ${connections.size} WebSocket clients for restaurant_${decoded.RestID}`);
     }
 
     // Return results
     res.json(responseData);
-    
+
   } catch (error) {
     console.error('Error executing with JWT:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to execute stored procedure',
       message: error.message,
       details: error.stack
@@ -234,22 +234,22 @@ router.post('/execute-jwt', async (req, res) => {
 router.get('/:restId', async (req, res) => {
   try {
     const { restId } = req.params;
-    
+
     if (!restId) {
-      return res.status(400).json({ 
-        error: 'Restaurant ID is required' 
+      return res.status(400).json({
+        error: 'Restaurant ID is required'
       });
     }
 
     console.log(`🚀 Starting queue data flow for Restaurant ID: ${restId}`);
-    
+
     // Step 1: Get restaurant configuration from Main DB
     console.log(`📞 Step 1: Getting restaurant configuration from Main DB...`);
     await databaseService.initializeMainDb();
-    
+
     const request = databaseService.mainPool.request();
     request.input('RestId', require('mssql').VarChar, restId);
-    
+
     const configResult = await request.query(`
       SELECT [RestID],
              [RestName],
@@ -262,8 +262,8 @@ router.get('/:restId', async (req, res) => {
     `);
 
     if (configResult.recordset.length === 0) {
-      return res.status(404).json({ 
-        error: `Restaurant with ID ${restId} not found` 
+      return res.status(404).json({
+        error: `Restaurant with ID ${restId} not found`
       });
     }
 
@@ -277,7 +277,7 @@ router.get('/:restId', async (req, res) => {
       RestUserName: restConfig.RestUserName,
       RestPassword: restConfig.RestPassword ? '[PROTECTED]' : 'NULL'
     });
-    
+
     // Debug: ตรวจสอบข้อมูลก่อนส่งกลับ
     console.log('📤 Sending response with config:', {
       RestID: restConfig.RestID,
@@ -303,10 +303,10 @@ router.get('/:restId', async (req, res) => {
       },
       timestamp: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error('Error in queue data flow:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to execute queue data flow',
       message: error.message,
       details: error.stack
@@ -318,10 +318,10 @@ router.get('/:restId', async (req, res) => {
 router.post('/execute', async (req, res) => {
   try {
     const { RestServerName, RestDBName, RestUserName, RestPassword, QueStatus } = req.body;
-    
+
     // Validate required fields
     if (!RestServerName || !RestDBName || !RestUserName || !RestPassword) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing required connection details',
         required: ['RestServerName', 'RestDBName', 'RestUserName', 'RestPassword']
       });
@@ -331,7 +331,7 @@ router.post('/execute', async (req, res) => {
     console.log(`🚀 Executing stored procedure with provided connection details`);
     console.log(`📋 Connection info: ${RestServerName} -> ${RestDBName} (User: ${RestUserName})`);
     console.log(`📋 QueStatus parameter: ${queStatusValue}`);
-    
+
     // Parse server and port from RestServerName (format: server,port)
     const parseServerAndPort = (serverString) => {
       console.log(`🔍 Parsing server string: "${serverString}"`);
@@ -353,7 +353,7 @@ router.post('/execute', async (req, res) => {
 
     const serverInfo = parseServerAndPort(RestServerName);
     console.log(`📋 Final connection details: ${serverInfo.server}:${serverInfo.port} -> ${RestDBName}`);
-    
+
     // Create database configuration
     const dbConfig = {
       server: serverInfo.server,
@@ -365,33 +365,33 @@ router.post('/execute', async (req, res) => {
         encrypt: true,
         trustServerCertificate: true,
         enableArithAbort: true,
-        connectionTimeout: 100000,
-        requestTimeout: 100000
+        connectionTimeout: 100010,
+        requestTimeout: 100010
       }
     };
 
     console.log(`📞 Connecting to: ${dbConfig.server}:${dbConfig.port} -> ${dbConfig.database}`);
-    
+
     // Connect to database
     const sql = require('mssql');
     const pool = await sql.connect(dbConfig);
-    
+
     console.log(`✅ Connected successfully!`);
-    
+
     // Execute stored procedure [dbo].[Sp_TB_QueOrderStatus] with dynamic QueStatus
     console.log(`📞 Executing: [dbo].[Sp_TB_QueOrderStatus] '${queStatusValue}', 0`);
-    
+
     const request = pool.request();
     request.input('QueStatus', sql.VarChar(50), queStatusValue);
     request.input('ZoneID', sql.Int, 0);
-    
+
     const result = await request.execute('[dbo].[Sp_TB_QueOrderStatus]');
-    
+
     console.log(`✅ Stored procedure returned ${result.recordset?.length || 0} records`);
-    
+
     // Close connection
     await pool.close();
-    
+
     // Return results
     res.json({
       success: true,
@@ -409,10 +409,10 @@ router.post('/execute', async (req, res) => {
       },
       timestamp: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error('Error executing stored procedure:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to execute stored procedure',
       message: error.message,
       details: error.stack
@@ -424,10 +424,10 @@ router.post('/execute', async (req, res) => {
 router.post('/execute-trnid', async (req, res) => {
   try {
     const { RestServerName, RestDBName, RestUserName, RestPassword, TrnID } = req.body;
-    
+
     // Validate required fields
     if (!RestServerName || !RestDBName || !RestUserName || !RestPassword || !TrnID) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing required connection details or TrnID',
         required: ['RestServerName', 'RestDBName', 'RestUserName', 'RestPassword', 'TrnID']
       });
@@ -436,7 +436,7 @@ router.post('/execute-trnid', async (req, res) => {
     console.log(`🚀 Executing Sp_TB_QueOrderStatus_TrnID with provided connection details`);
     console.log(`📋 Connection info: ${RestServerName} -> ${RestDBName} (User: ${RestUserName})`);
     console.log(`📋 TrnID: ${TrnID}`);
-    
+
     // Parse server and port from RestServerName (format: server,port)
     const parseServerAndPort = (serverString) => {
       console.log(`🔍 Parsing server string: "${serverString}"`);
@@ -458,7 +458,7 @@ router.post('/execute-trnid', async (req, res) => {
 
     const serverInfo = parseServerAndPort(RestServerName);
     console.log(`📋 Final connection details: ${serverInfo.server}:${serverInfo.port} -> ${RestDBName}`);
-    
+
     // Create database configuration
     const dbConfig = {
       server: serverInfo.server,
@@ -470,32 +470,32 @@ router.post('/execute-trnid', async (req, res) => {
         encrypt: true,
         trustServerCertificate: true,
         enableArithAbort: true,
-        connectionTimeout: 100000,
-        requestTimeout: 100000
+        connectionTimeout: 100010,
+        requestTimeout: 100010
       }
     };
 
     console.log(`📞 Connecting to: ${dbConfig.server}:${dbConfig.port} -> ${dbConfig.database}`);
-    
+
     // Connect to database
     const sql = require('mssql');
     const pool = await sql.connect(dbConfig);
-    
+
     console.log(`✅ Connected successfully!`);
-    
+
     // Execute stored procedure [dbo].[Sp_TB_QueOrderStatus_TrnID] with @TrnID parameter
     console.log(`📞 Executing: [dbo].[Sp_TB_QueOrderStatus_TrnID] @TrnID='${TrnID}'`);
-    
+
     const request = pool.request();
     request.input('TrnID', sql.VarChar(50), TrnID);
-    
+
     const result = await request.execute('[dbo].[Sp_TB_QueOrderStatus_TrnID]');
-    
+
     console.log(`✅ Stored procedure returned ${result.recordset?.length || 0} records`);
-    
+
     // Close connection
     await pool.close();
-    
+
     // Return results
     res.json({
       success: true,
@@ -513,10 +513,10 @@ router.post('/execute-trnid', async (req, res) => {
       },
       timestamp: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error('Error executing Sp_TB_QueOrderStatus_TrnID:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to execute stored procedure',
       message: error.message,
       details: error.stack
@@ -545,39 +545,39 @@ router.get('/health', async (req, res) => {
 router.post('/execute-kds', async (req, res) => {
   try {
     const { token, kdsType } = req.body;
-    
+
     if (!token) {
-      return res.status(400).json({ 
-        error: 'JWT token is required' 
+      return res.status(400).json({
+        error: 'JWT token is required'
       });
     }
 
     if (!kdsType || ![1, 4].includes(parseInt(kdsType))) {
-      return res.status(400).json({ 
-        error: 'KDS type is required and must be 1 or 4' 
+      return res.status(400).json({
+        error: 'KDS type is required and must be 1 or 4'
       });
     }
 
     console.log(`🔓 Executing KDS stored procedure with type: ${kdsType}`);
-    
+
     // Verify and decode JWT token
     let decoded;
     try {
       decoded = jwt.verify(token, JWT_SECRET);
       console.log(`✅ JWT token verified for restaurant: ${decoded.RestName}`);
     } catch (jwtError) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'Invalid or expired token',
         message: jwtError.message
       });
     }
-    
+
     // Extract connection details from JWT payload
     const { RestServerName, RestDBName, RestUserName, RestPassword } = decoded;
-    
+
     console.log(`📋 Using connection from JWT: ${RestServerName} -> ${RestDBName} (User: ${RestUserName})`);
     console.log(`📋 KDS Type parameter: ${kdsType}`);
-    
+
     // Parse server and port from RestServerName (format: server,port)
     const parseServerAndPort = (serverString) => {
       console.log(`🔍 Parsing server string: "${serverString}"`);
@@ -613,8 +613,8 @@ router.post('/execute-kds', async (req, res) => {
         trustServerCertificate: true,
         enableArithAbort: true
       },
-      connectionTimeout: 100000,
-      requestTimeout: 100000
+      connectionTimeout: 100010,
+      requestTimeout: 100010
     };
 
     console.log(`📞 Connecting to: ${serverInfo.server}:${serverInfo.port} -> ${RestDBName}`);
@@ -628,10 +628,10 @@ router.post('/execute-kds', async (req, res) => {
     const request = pool.request();
     const storedProcName = '[dbo].[Sp_TB_OrderKDS]';
     const params = `${kdsType}, 0, 0`;
-    
+
     console.log(`📞 Executing: ${storedProcName} ${params}`);
     const result = await request.query(`EXEC ${storedProcName} ${kdsType}, 0, 0`);
-    
+
     console.log(`✅ KDS stored procedure returned ${result.recordset?.length || 0} records`);
 
     // Close connection
@@ -666,22 +666,22 @@ router.post('/execute-kds', async (req, res) => {
         type: 'kdsUpdate',
         data: responseData.data
       });
-      
+
       connections.forEach(ws => {
         if (ws.readyState === 1) { // WebSocket.OPEN
           ws.send(message);
         }
       });
-      
+
       console.log(`📡 Broadcasting KDS update to ${connections.size} WebSocket clients for restaurant_${decoded.RestID}`);
     }
 
     // Return results
     res.json(responseData);
-    
+
   } catch (error) {
     console.error('Error executing KDS stored procedure:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to execute KDS stored procedure',
       message: error.message,
       details: error.stack

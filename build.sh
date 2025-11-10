@@ -14,7 +14,7 @@ if [ $? -eq 0 ]; then
     
     echo ""
     echo "� To run the container:"
-    echo "docker run -d -p 10000:10000 -p 8080:8080 --name gongcha-queue gongcha-queue:latest"
+    echo "docker run -d -p 10001:10001 -p 8080:8080 --name gongcha-queue gongcha-queue:latest"
     echo ""
     echo "🔄 To stop the container:"
     echo "docker stop gongcha-queue"
@@ -23,7 +23,7 @@ if [ $? -eq 0 ]; then
     echo "docker rm gongcha-queue"
     echo ""
     echo "📱 Access URLs:"
-    echo "- API: http://localhost:10000/health"
+    echo "- API: http://localhost:10001/health"
     echo "- Web App: http://localhost:8080/rest/1"
 else
     echo "❌ Docker build failed!"

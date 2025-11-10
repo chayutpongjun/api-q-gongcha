@@ -3,7 +3,7 @@ const sql = require('mssql');
 // Helper function to parse server and port
 const parseServerAndPort = (serverString) => {
   if (!serverString) return { server: null, port: null };
-  
+
   const parts = serverString.split(',');
   if (parts.length === 2) {
     return {
@@ -37,13 +37,13 @@ const mainDbConfig = {
     encrypt: true,
     trustServerCertificate: true,
     enableArithAbort: true,
-    connectionTimeout: 100000,
-    requestTimeout: 100000
+    connectionTimeout: 100010,
+    requestTimeout: 100010
   },
   pool: {
     max: 10,
     min: 0,
-    idleTimeoutMillis: 100000
+    idleTimeoutMillis: 100010
   }
 };
 
@@ -64,7 +64,7 @@ class DatabaseService {
             // Ignore close errors
           }
         }
-        
+
         console.log('🔄 Reconnecting to main database...');
         this.mainPool = await sql.connect(mainDbConfig);
         console.log('✅ Connected to main database');
@@ -81,10 +81,10 @@ class DatabaseService {
   async getRestaurantConfig(restId) {
     try {
       await this.initializeMainDb();
-      
+
       const request = this.mainPool.request();
       request.input('RestId', sql.VarChar, restId);
-      
+
       const result = await request.query(`
         SELECT [RestID],
                [RestName],
@@ -113,7 +113,7 @@ class DatabaseService {
       // Parse server and port from RestServerName (format: server,port or just server)
       const restServerInfo = parseServerAndPort(restConfig.RestServerName);
       const poolKey = `${restServerInfo.server}_${restServerInfo.port}_${restConfig.RestDBName}`;
-      
+
       if (this.restaurantPools.has(poolKey)) {
         return this.restaurantPools.get(poolKey);
       }
@@ -128,21 +128,21 @@ class DatabaseService {
           encrypt: true,
           trustServerCertificate: true,
           enableArithAbort: true,
-          connectionTimeout: 100000,
-          requestTimeout: 100000
+          connectionTimeout: 100010,
+          requestTimeout: 100010
         },
         pool: {
           max: 10,
           min: 0,
-          idleTimeoutMillis: 100000
+          idleTimeoutMillis: 100010
         }
       };
 
       console.log(`🔗 Connecting to restaurant database: ${restConfig.RestName} at ${restaurantDbConfig.server}:${restaurantDbConfig.port}`);
-      
+
       const pool = await sql.connect(restaurantDbConfig);
       this.restaurantPools.set(poolKey, pool);
-      
+
       console.log(`✅ Connected to restaurant database: ${restConfig.RestName}`);
       return pool;
     } catch (error) {
@@ -162,27 +162,27 @@ class DatabaseService {
     try {
       // Get restaurant configuration
       const restConfig = await this.getRestaurantConfig(restId);
-      
+
       // Connect to restaurant database
       const restaurantPool = await this.getRestaurantConnection(restConfig);
-      
+
       // Execute stored procedure: exec [dbo].[Sp_TB_QueOrderStatus] 'ALL', 0
       const request = restaurantPool.request();
-      
+
       // Add parameters based on the stored procedure signature
       request.input('QueStatus', sql.VarChar(50), 'ALL');
       request.input('ZoneID', sql.Int, 5);
-      
+
       console.log(`📞 Calling stored procedure: [dbo].[Sp_TB_QueOrderStatus] with database: ${restConfig.RestDBName}`);
       console.log(`📞 Parameters: QueStatus='ALL', ZoneID=0`);
-      
+
       const result = await request.execute('[dbo].[Sp_TB_QueOrderStatus]');
-      
+
       // Debug: Check all result properties
       console.log(`📊 Result object keys:`, Object.keys(result));
       console.log(`📊 Recordset length: ${result.recordset?.length || 0}`);
       console.log(`📊 Recordsets count: ${result.recordsets?.length || 0}`);
-      
+
       // Check if there are multiple recordsets
       if (result.recordsets && result.recordsets.length > 1) {
         console.log(`📊 Multiple recordsets found:`);
@@ -190,30 +190,30 @@ class DatabaseService {
           console.log(`   Recordset ${index}: ${rs.length} records`);
         });
       }
-      
+
       // Get the first recordset (or combine all if needed)
       let rawData = result.recordset || [];
-      
+
       // If there are multiple recordsets, you might need to combine them or use a specific one
       if (result.recordsets && result.recordsets.length > 0) {
         // Use the largest recordset or combine as needed
         const allRecordsets = result.recordsets;
-        const largestRecordset = allRecordsets.reduce((prev, current) => 
+        const largestRecordset = allRecordsets.reduce((prev, current) =>
           (prev.length > current.length) ? prev : current
         );
         rawData = largestRecordset;
         console.log(`📊 Using recordset with ${rawData.length} records`);
       }
-      
+
       // Debug: Show sample of first few records
       if (rawData.length > 0) {
         console.log(`📊 Sample record structure:`, Object.keys(rawData[0]));
         console.log(`📊 First record:`, rawData[0]);
       }
-      
+
       // Process and organize queue data
       const queueData = this.processQueueData(rawData);
-      
+
       return {
         restaurantInfo: {
           restId: restConfig.RestID,
@@ -234,43 +234,43 @@ class DatabaseService {
     try {
       // Get restaurant configuration
       const restConfig = await this.getRestaurantConfig(restId);
-      
+
       // Connect to restaurant database
       const restaurantPool = await this.getRestaurantConnection(restConfig);
-      
+
       // Execute stored procedure: exec [dbo].[Sp_TB_QueOrderStatus] 'ALL', 0
       const request = restaurantPool.request();
-      
+
       request.input('QueStatus', sql.VarChar(50), 'ALL');
       request.input('ZoneID', sql.Int, 0);
-      
+
       console.log(`📞 [RAW] Calling stored procedure: [dbo].[Sp_TB_QueOrderStatus] with database: ${restConfig.RestDBName}`);
       console.log(`📞 [RAW] Parameters: QueStatus='ALL', ZoneID=0`);
-      
+
       const result = await request.execute('[dbo].[Sp_TB_QueOrderStatus]');
-      
+
       // Debug raw result
       console.log(`📊 [RAW] Result object keys:`, Object.keys(result));
       console.log(`📊 [RAW] Recordset length: ${result.recordset?.length || 0}`);
       console.log(`📊 [RAW] Recordsets count: ${result.recordsets?.length || 0}`);
-      
+
       let rawData = result.recordset || [];
-      
+
       // Handle multiple recordsets
       if (result.recordsets && result.recordsets.length > 0) {
         console.log(`📊 [RAW] Multiple recordsets detected:`);
         result.recordsets.forEach((rs, index) => {
           console.log(`   [RAW] Recordset ${index}: ${rs.length} records`);
         });
-        
+
         // Use the largest recordset
-        const largestRecordset = result.recordsets.reduce((prev, current) => 
+        const largestRecordset = result.recordsets.reduce((prev, current) =>
           (prev.length > current.length) ? prev : current
         );
         rawData = largestRecordset;
         console.log(`📊 [RAW] Using recordset with ${rawData.length} records`);
       }
-      
+
       return {
         restaurantInfo: {
           restId: restConfig.RestID,
@@ -328,7 +328,7 @@ class DatabaseService {
 
       // เก็บข้อมูลทั้งหมดไว้
       processedData.all.push(queueItem);
-      
+
       // เก็บ status ทั้งหมดที่พบ
       allStatuses.add(item.QueStatus);
 
@@ -365,7 +365,7 @@ class DatabaseService {
     // Sort each category by QueCreatedatetime (newest first)
     Object.keys(processedData).forEach(key => {
       if (Array.isArray(processedData[key]) && key !== 'summary') {
-        processedData[key].sort((a, b) => 
+        processedData[key].sort((a, b) =>
           new Date(b.queCreatedatetime) - new Date(a.queCreatedatetime)
         );
       }
@@ -378,14 +378,14 @@ class DatabaseService {
   async getQueueDataOriginalFlow(restId) {
     try {
       console.log(`🔄 Starting original flow for RestID: ${restId}`);
-      
+
       // Step 1: Connect to Main Database and get restaurant configuration
       console.log(`📞 Step 1: Connecting to Main Database...`);
       await this.initializeMainDb();
-      
+
       const request = this.mainPool.request();
       request.input('RestId', sql.VarChar, restId);
-      
+
       const configResult = await request.query(`
         SELECT [RestID],
                [RestName],
@@ -410,29 +410,29 @@ class DatabaseService {
         RestDBName: restConfig.RestDBName,
         RestUserName: restConfig.RestUserName
       });
-      
+
       // Step 2: Connect to Restaurant Database using the config
       console.log(`📞 Step 2: Connecting to Restaurant Database...`);
       const restaurantPool = await this.getRestaurantConnection(restConfig);
       console.log(`✅ Step 2 Complete: Connected to ${restConfig.RestDBName}`);
-      
+
       // Step 3: Execute stored procedure with parameters 'ALL', 0
       console.log(`📞 Step 3: Executing stored procedure [dbo].[Sp_TB_QueOrderStatus] 'ALL', 0`);
       console.log(`📞 Database: ${restConfig.RestDBName} on ${restConfig.RestServerName}`);
-      
+
       const spRequest = restaurantPool.request();
       spRequest.input('QueStatus', sql.VarChar(50), 'ALL');
       spRequest.input('ZoneID', sql.Int, 0);
-      
+
       const spResult = await spRequest.execute('[dbo].[Sp_TB_QueOrderStatus]');
-      
+
       // Enhanced debugging
       console.log(`📊 Full result object properties:`, Object.keys(spResult));
       console.log(`📊 Recordset length: ${spResult.recordset?.length || 0}`);
       console.log(`📊 Recordsets count: ${spResult.recordsets?.length || 0}`);
       console.log(`📊 Return value: ${spResult.returnValue}`);
       console.log(`📊 Rows affected: ${spResult.rowsAffected}`);
-      
+
       // Check all recordsets if multiple exist
       if (spResult.recordsets && spResult.recordsets.length > 0) {
         console.log(`📊 Multiple recordsets detected:`);
@@ -443,30 +443,30 @@ class DatabaseService {
           }
         });
       }
-      
+
       // Debug: Show sample data from main recordset
       if (spResult.recordset && spResult.recordset.length > 0) {
         console.log(`📊 Sample record from main recordset:`, spResult.recordset[0]);
         console.log(`📊 Record structure:`, Object.keys(spResult.recordset[0]));
-        
+
         // Show first 3 records for comparison
         console.log(`📊 First 3 records:`, spResult.recordset.slice(0, 3));
       }
-      
+
       // Try alternative data extraction
       let finalData = spResult.recordset || [];
-      
+
       // If recordset is empty but recordsets exist, use the largest one
       if ((!finalData || finalData.length === 0) && spResult.recordsets && spResult.recordsets.length > 0) {
-        const largestRecordset = spResult.recordsets.reduce((prev, current) => 
+        const largestRecordset = spResult.recordsets.reduce((prev, current) =>
           (prev.length > current.length) ? prev : current
         );
         finalData = largestRecordset;
         console.log(`📊 Using alternative recordset with ${finalData.length} records`);
       }
-      
+
       console.log(`✅ Step 3 Complete: Final data has ${finalData.length} records`);
-      
+
       return {
         success: true,
         restaurantConfig: {
@@ -487,7 +487,7 @@ class DatabaseService {
         },
         executionFlow: {
           step1: 'Main DB connection - SUCCESS',
-          step2: 'Restaurant DB connection - SUCCESS', 
+          step2: 'Restaurant DB connection - SUCCESS',
           step3: 'Stored procedure execution - SUCCESS',
           storedProcedure: '[dbo].[Sp_TB_QueOrderStatus]',
           parameters: { QueStatus: 'ALL', ZoneID: 0 }
@@ -504,11 +504,11 @@ class DatabaseService {
   async testTableData(restId) {
     try {
       console.log(`🔍 Testing table data for RestID: ${restId}`);
-      
+
       // Get restaurant config
       const restConfig = await this.getRestaurantConfig(restId);
       const restaurantPool = await this.getRestaurantConnection(restConfig);
-      
+
       // Test queries
       const tests = [
         {
@@ -536,9 +536,9 @@ class DatabaseService {
           query: 'EXEC [dbo].[Sp_TB_QueOrderStatus] @QueStatus = \'ALL\', @ZoneID = 0'
         }
       ];
-      
+
       const results = {};
-      
+
       for (const test of tests) {
         try {
           console.log(`🧪 Running test: ${test.name}`);
@@ -557,7 +557,7 @@ class DatabaseService {
           };
         }
       }
-      
+
       return {
         restaurantConfig: {
           RestID: restConfig.RestID,
@@ -580,12 +580,12 @@ class DatabaseService {
         await this.mainPool.close();
         this.mainPool = null;
       }
-      
+
       for (const [key, pool] of this.restaurantPools) {
         await pool.close();
       }
       this.restaurantPools.clear();
-      
+
       console.log('✅ All database connections closed');
     } catch (error) {
       console.error('❌ Error closing database connections:', error);

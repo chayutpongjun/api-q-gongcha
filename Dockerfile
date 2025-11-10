@@ -27,18 +27,18 @@ COPY . .
 RUN mkdir -p logs
 
 # Expose API port only
-EXPOSE 10000
+EXPOSE 10001
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=10000
+ENV PORT=10001
 ENV DB_MAIN_SERVER=203.150.191.149,28914
 ENV DB_MAIN_DATABASE=CFS_Gongcha_Main
 ENV DB_MAIN_USER=gongcha
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:10000/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:10001/health || exit 1
 
 # Start the API server
 CMD ["npm", "start"]

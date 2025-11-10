@@ -19,7 +19,7 @@ API Server สำหรับระบบจัดการคิว Gongcha
 ## Environment Variables
 
 ```
-PORT=10000
+PORT=10001
 DB_MAIN_SERVER=203.150.191.149,28914
 DB_MAIN_DATABASE=CFS_Gongcha_Main
 DB_MAIN_USER=gongcha
@@ -38,7 +38,7 @@ npm start
 
 ```bash
 docker build -t gongcha-api .
-docker run -d -p 10000:10000 gongcha-api
+docker run -d -p 10001:10001 gongcha-api
 ```
 
 ## Production URLs
