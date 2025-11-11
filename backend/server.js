@@ -150,14 +150,25 @@ app.post("/api/callQueue", async (req, res) => {
 });
 
 // ✅ ทดสอบ endpoint (ตัวอย่าง mock)
-app.get("/rest/1", async (req, res) => {
-  const result = [{ QueName: "K757" }]; // mock data จำลองผลจาก DB
-  res.json(result);
+// TODO: แทนที่ด้วยการดึงข้อมูลจาก database จริง
+app.get("/rest/:restId", async (req, res) => {
+  try {
+    const { restId } = req.params;
+    console.log(`📞 GET /rest/${restId} - Mock endpoint`);
 
-  const latest = result[0].QueName;
-  if (latest) {
-    const message = `คิว ${latest}`;
-    await callQueueVoice(message);
+    // Mock data สำหรับทดสอบ
+    const result = [{ QueName: "K757" }];
+    res.json(result);
+
+    // สร้างไฟล์เสียงอัตโนมัติ
+    const latest = result[0].QueName;
+    if (latest) {
+      const message = `คิว ${latest}`;
+      await callQueueVoice(message);
+    }
+  } catch (error) {
+    console.error('Error in /rest/:restId:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -11,6 +11,7 @@
     "docker:push": "docker push thanvasu/q-gongcha-api:latest"
   },
   "dependencies": {
+    "axios": "^1.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",

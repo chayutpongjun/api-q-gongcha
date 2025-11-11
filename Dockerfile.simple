@@ -15,36 +15,29 @@ RUN apk add --no-cache \
     freetds-dev \
     wget
 
-# Copy package files first (for better caching)
+# Copy package files
 COPY package*.json ./
 
-# Install Node.js dependencies
+# Install dependencies
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy application code
-COPY backend ./backend
-COPY public ./public
+# Copy all application files
+COPY . .
 
-# Create necessary directories
-RUN mkdir -p logs public/tts && \
-    chmod -R 755 public/tts
+# Create directories
+RUN mkdir -p logs public/tts && chmod -R 755 public/tts
 
-# Expose API port
+# Expose port
 EXPOSE 10001
 
-# Set environment variables (defaults - override with docker run -e)
+# Environment variables
 ENV NODE_ENV=production
 ENV PORT=10001
 ENV HOST=0.0.0.0
-ENV DB_MAIN_SERVER=203.150.191.149,28914
-ENV DB_MAIN_DATABASE=CFS_Gongcha_Main
-ENV DB_MAIN_USER=gongcha
-ENV DB_MAIN_PASSWORD=Faofao000@
-ENV JWT_SECRET=your_jwt_secret_here
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:10001/health || exit 1
 
-# Start the API server
+# Start server
 CMD ["node", "backend/server.js"]

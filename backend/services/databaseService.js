@@ -37,13 +37,13 @@ const mainDbConfig = {
     encrypt: true,
     trustServerCertificate: true,
     enableArithAbort: true,
-    connectionTimeout: 100010,
-    requestTimeout: 100010
+    connectionTimeout: 15000,  // 15 seconds
+    requestTimeout: 30000      // 30 seconds
   },
   pool: {
     max: 10,
-    min: 0,
-    idleTimeoutMillis: 100010
+    min: 2,  // Keep 2 connections ready
+    idleTimeoutMillis: 30000
   }
 };
 
@@ -128,13 +128,13 @@ class DatabaseService {
           encrypt: true,
           trustServerCertificate: true,
           enableArithAbort: true,
-          connectionTimeout: 100010,
-          requestTimeout: 100010
+          connectionTimeout: 15000,  // 15 seconds
+          requestTimeout: 30000      // 30 seconds
         },
         pool: {
           max: 10,
-          min: 0,
-          idleTimeoutMillis: 100010
+          min: 2,  // Keep 2 connections ready
+          idleTimeoutMillis: 30000
         }
       };
 
