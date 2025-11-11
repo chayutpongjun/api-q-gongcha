@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gongcha Queue</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #C10130 0%, #a50e2a 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+
+            .logo {
+                width: 90px;
+                height: 90px;
+                margin: 0 auto 15px;
+                border: 3px solid #C10130;
+                box-shadow: 0 4px 20px rgba(128, 128, 128, 0.25);
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            min-height: 100vh;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                border-radius: 0;
+                margin: 0;
+                min-height: 100vh;
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            color: #2d3436;
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 3px solid #C10130;
+            position: relative;
+        }
+
+        .notification-bell {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(193, 1, 48, 0.1);
+            border: 2px solid #C10130;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            color: #C10130;
+        }
+
+        .notification-bell:hover {
+            background: rgba(193, 1, 48, 0.2);
+            transform: scale(1.1);
+        }
+
+        .notification-bell.active {
+            background: #ab772b;
+            border-color: #ab772b;
+            color: white;
+            animation: bellRing 0.5s ease-in-out;
+        }
+
+        @keyframes bellRing {
+
+            0%,
+            100% {
+                transform: rotate(0deg);
+            }
+
+            25% {
+                transform: rotate(-10deg);
+            }
+
+            75% {
+                transform: rotate(10deg);
+            }
+        }
+
+        .notification-dot {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 12px;
+            height: 12px;
+            background: #ff4444;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: none;
+        }
+
+        .notification-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 30px;
+            border: none;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            color: #999;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close-modal:hover {
+            color: #C10130;
+        }
+
+        .modal-content h3 {
+            color: #C10130;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 18px;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .modal-content input:focus {
+            border-color: #C10130;
+            outline: none;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn.save {
+            background: #C10130;
+            color: white;
+        }
+
+        .modal-btn.save:hover {
+            background: #a50e2a;
+        }
+
+        .modal-btn.cancel {
+            background: #ddd;
+            color: #333;
+        }
+
+        .modal-btn.cancel:hover {
+            background: #ccc;
+        }
+
+        .alert-popup {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            text-align: center;
+            max-width: 350px;
+            width: 90%;
+            animation: popupBounce 0.5s ease-out;
+        }
+
+        @keyframes popupBounce {
+            0% {
+                transform: translate(-50%, -50%) scale(0.3);
+                opacity: 0;
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .alert-popup.show {
+            display: block;
+        }
+
+        .alert-popup h2 {
+            color: #C10130;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        .alert-popup p {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .alert-popup .queue-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #ab772b;
+            background: linear-gradient(135deg, #ab772b 0%, #d4a574 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0;
+        }
+
+        .alert-popup .close-btn {
+            background: #C10130;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .alert-popup .close-btn:hover {
+            background: #a50e2a;
+            transform: scale(1.05);
+        }
+
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1999;
+            backdrop-filter: blur(5px);
+        }
+
+        .popup-overlay.show {
+            display: block;
+        }
+
+        .permission-popup {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            padding: 0;
+            max-width: 400px;
+            width: 90%;
+            z-index: 3000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            0% {
+                transform: translateX(-50%) translateY(-20px);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .permission-popup.show {
+            display: block;
+        }
+
+        .permission-header {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e9ecef;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .permission-header .icon {
+            width: 16px;
+            height: 16px;
+            background: #C10130;
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .permission-header .site-name {
+            font-weight: 500;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .permission-content {
+            padding: 16px;
+        }
+
+        .permission-content .message {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .permission-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .permission-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .permission-btn.allow {
+            background: #4285f4;
+            color: white;
+            border-color: #4285f4;
+        }
+
+        .permission-btn.allow:hover {
+            background: #3367d6;
+        }
+
+        .permission-btn.block {
+            color: #666;
+        }
+
+        .permission-btn.block:hover {
+            background: #f1f3f4;
+        }
+
+
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 25px rgba(128, 128, 128, 0.3);
+            overflow: hidden;
+            border: 4px solid #C10130;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .status-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 18px 30px;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .tab {
+                padding: 15px 20px;
+                font-size: 16px;
+            }
+        }
+
+        .tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .tab:hover {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+
+        .tab:hover::before {
+            left: 100%;
+        }
+
+        .tab.active:hover {
+            background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        /* Tab-specific styles */
+        .tab-ready.active {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .tab-ready.active:hover {
+            background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%) !important;
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        .tab-waiting.active {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+
+        .tab-waiting.active:hover {
+            background: linear-gradient(135deg, #fd7e14 0%, #dc7633 100%) !important;
+            box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+        }
+
+        .tab-ready:not(.active):hover {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
+        }
+
+        .tab-waiting:not(.active):hover {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2);
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 15px;
+            }
+        }
+
+        .login-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .queue-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-top: 25px;
+            padding: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .queue-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                margin-top: 15px;
+                padding: 15px;
+            }
+        }
+
+        .queue-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border: none;
+            border-radius: 20px;
+            padding: 25px 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+            .queue-card {
+                padding: 20px 25px;
+                border-radius: 16px;
+                margin-bottom: 8px;
+            }
+        }
+
+        .queue-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #C10130 0%, #a50e2a 100%);
+        }
+
+        .queue-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .queue-number {
+            font-size: 2.2em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ab772b 0%, #946623 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .queue-number {
+                font-size: 1.8em;
+            }
+        }
+
+        .queue-status {
+            padding: 12px 20px;
+            border-radius: 25px;
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .queue-status::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .queue-card:hover .queue-status::before {
+            left: 100%;
+        }
+
+        .status-Ready {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+            color: white !important;
+            animation: statusPulse 2s infinite;
+        }
+
+        .status-READY {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+            color: white !important;
+            animation: statusPulse 2s infinite;
+        }
+
+        .status-Cooking {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #fff;
+            animation: statusGlow 1.5s infinite alternate;
+        }
+
+        .status-COOKING {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #fff;
+            animation: statusGlow 1.5s infinite alternate;
+        }
+
+        .status-Done {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #fff;
+        }
+
+        .status-DONE {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #fff;
+        }
+
+        .status-Served {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #fff;
+        }
+
+        .status-SERVED {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #fff;
+        }
+
+        .status-UNKNOWN {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #fff;
+        }
+
+        .status-Pending {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #fff;
+        }
+
+        .status-PENDING {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #fff;
+        }
+
+        .status-Cancelled {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .status-CANCELLED {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .status-Preparing {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #fff;
+        }
+
+        .status-PREPARING {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: #fff;
+        }
+
+        /* Default status style for any unmatched status - but NOT for Ready status */
+        .queue-status:not([class*="status-Ready"]):not([class*="status-READY"]) {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+        }
+
+        @keyframes statusPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes statusGlow {
+            0% {
+                box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+            }
+
+            100% {
+                box-shadow: 0 4px 25px rgba(255, 193, 7, 0.8);
+            }
+        }
+
+        .queue-info {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn:disabled {
+            background: #fbfbfb;
+            cursor: not-allowed;
+        }
+
+        .restaurant-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: right;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-indicator {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-indicator.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-indicator.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .live-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .status-page {
+            display: none;
+        }
+
+        .status-page.active {
+            display: block;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #C10130;
+        }
+
+        .page-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .status-count {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ab772b;
+            padding: 5px 15px;
+            background: white;
+            border-radius: 20px;
+            border: 2px solid #ab772b;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .stats {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ab772b;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
+        .stat-description {
+            color: #999;
+            font-size: 11px;
+            margin-top: 3px;
+            line-height: 1.2;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+            padding: 20px;
+        }
+
+        .btn-page {
+            background: linear-gradient(135deg, #C10130 0%, #a50e2a 100%);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(193, 1, 48, 0.3);
+            min-width: 35px;
+        }
+
+        .btn-page:hover {
+            background: linear-gradient(135deg, #a50e2a 0%, #8a0c24 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(193, 1, 48, 0.4);
+        }
+
+        .btn-page:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .page-info {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ab772b;
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid #ab772b;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .pagination {
+                gap: 10px;
+                padding: 15px;
+            }
+
+            .btn-page {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+
+            .page-info {
+                font-size: 14px;
+                padding: 6px 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="notification-bell" onclick="openNotificationModal()" title="ตั้งค่าแจ้งเตือน">
+                🔔
+                <div class="notification-dot" id="notificationDot"></div>
+            </div>
+            <div class="logo">
+                <img src="https://thanvasu.com/CRM/161/Logo/Logo2.jpg" alt="Logo"
+                    onerror="this.style.display='none'; this.parentNode.innerHTML='🧋';">
+            </div>
+            <h1 id="restaurantTitle">Gongcha Queue</h1>
+        </div>
+
+        <div class="content">
+            <!-- Login Section (Hidden by default) -->
+            <div class="login-section" id="loginSection" style="display: none;">
+                <h3>🔑 สถานะการเข้าสู่ระบบ</h3>
+                <p>Restaurant ID: <span id="currentRestId"></span></p>
+                <div id="loginStatus">🔄 กำลังเข้าสู่ระบบอัตโนมัติ...</div>
+            </div>
+
+            <!-- Restaurant Info - Hidden -->
+            <div class="restaurant-info" id="restaurantInfo" style="display: none;">
+                <h4>📋 ข้อมูลร้าน</h4>
+                <div id="restaurantDetails"></div>
+            </div>
+
+            <!-- Auto Refresh Controls -->
+            <div class="auto-refresh" id="refreshControls" style="display: none;">
+                <label>
+                    <span id="realtimeStatus"><span class="status-indicator connected">เชื่อมต่อแล้ว</span></span>
+                </label>
+                <span id="lastUpdate"></span>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalQueues">0</div>
+                    <div class="stat-label">คิวทั้งหมด</div>
+                    <div class="stat-description">จำนวนคิวทั้งหมดในระบบ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="doneQueues">0</div>
+                    <div class="stat-label">คิวที่เสร็จแล้ว</div>
+                    <div class="stat-description">พร้อมเสิร์ฟ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="waitingQueues">0</div>
+                    <div class="stat-label">คิวที่รอ</div>
+                    <div class="stat-description">ทั้งหมด - เสร็จแล้ว</div>
+                </div>
+            </div>
+
+            <!-- Status Tabs -->
+            <div class="status-tabs" id="statusTabs" style="display: none;">
+                <button class="tab tab-ready active" onclick="showStatusPage('READY')">พร้อมเสิร์ฟ</button>
+                <button class="tab tab-waiting" onclick="showStatusPage('WAITING')">รอดำเนินการ</button>
+            </div>
+
+            <!-- Loading Section -->
+            <div id="loadingSection" class="loading">
+                <h3>🔄 กำลังโหลดข้อมูล...</h3>
+            </div>
+
+            <!-- Status Pages -->
+            <div id="statusPages" style="display: none;">
+                <!-- Ready Status Page -->
+                <div class="status-page active" id="page-READY">
+                    <div class="page-header">
+                        <h2>🟢 พร้อมเสิร์ฟ</h2>
+                        <div class="status-count" id="count-READY">0 คิว</div>
+                    </div>
+                    <div class="queue-grid" id="grid-READY"></div>
+                    <div class="pagination" id="pagination-READY" style="display: none;">
+                        <button class="btn-page" onclick="goToFirstPage('READY')">
+                            <<< /button>
+                                <button class="btn-page" onclick="changePage('READY', -1)">
+                                    << /button>
+                                        <span class="page-info" id="page-info-READY">1/1</span>
+                                        <button class="btn-page" onclick="changePage('READY', 1)">></button>
+                                        <button class="btn-page" onclick="goToLastPage('READY')">>></button>
+                    </div>
+                </div>
+
+                <!-- Waiting Status Page -->
+                <div class="status-page" id="page-WAITING">
+                    <div class="page-header">
+                        <h2>🟡 รอดำเนินการ</h2>
+                        <div class="status-count" id="count-WAITING">0 คิว</div>
+                    </div>
+                    <div class="queue-grid" id="grid-WAITING"></div>
+                    <div class="pagination" id="pagination-WAITING" style="display: none;">
+                        <button class="btn-page" onclick="goToFirstPage('WAITING')">
+                            <<< /button>
+                                <button class="btn-page" onclick="changePage('WAITING', -1)">
+                                    << /button>
+                                        <span class="page-info" id="page-info-WAITING">1/1</span>
+                                        <button class="btn-page" onclick="changePage('WAITING', 1)">></button>
+                                        <button class="btn-page" onclick="goToLastPage('WAITING')">>></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let jwtToken = null;
+        let restaurantId = null;
+        let currentFilter = 'ALL';
+        let ws = null;
+        let allQueueData = [];
+        let timeUpdateInterval = null;
+        let dataRefreshInterval = null;
+
+        // Pagination variables
+        let currentPages = { 'READY': 1, 'WAITING': 1 };
+        const itemsPerPage = 10;
+
+        // API Base URL - Use production API (HTTPS works from HTTP localhost)
+        const API_BASE = `https://api-q-gongcha.thanvasupos.com/api/queue`;
+
+        // Cookie management functions
+        function setCookie(name, value, hours = 24) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (hours * 60 * 60 * 1000));
+            document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + expires.toUTCString() + ';path=/;SameSite=Strict';
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+            }
+            return null;
+        }
+
+        function deleteCookie(name) {
+            document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;';
+        }
+
+        // WebSocket real-time connection
+        function initWebSocketConnection() {
+            const wsUrl = `wss://api-q-gongcha.thanvasupos.com`;
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('🔌 Connected to WebSocket server');
+                updateRealtimeStatus('connected', 'เชื่อมต่อแล้ว');
+
+                // Join restaurant room for targeted updates
+                if (restaurantId) {
+                    ws.send(JSON.stringify({
+                        type: 'join-restaurant',
+                        restaurantId: restaurantId
+                    }));
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('🔌 Disconnected from WebSocket server');
+                updateRealtimeStatus('disconnected', 'ขาดการเชื่อมต่อ');
+
+                // Attempt to reconnect after 3 seconds
+                setTimeout(() => {
+                    console.log('🔌 Attempting to reconnect WebSocket...');
+                    initWebSocketConnection();
+                }, 3000);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+
+                    if (message.type === 'queueUpdate') {
+                        console.log('📡 Received real-time queue update:', message.data.totalRecords, 'records');
+                        allQueueData = message.data.queueData || [];
+                        updateStats(allQueueData);
+                        displayAllStatusPages(allQueueData);
+                        checkNotifications(allQueueData);
+                        document.getElementById('lastUpdate').textContent = 'ข้อมูลล่าสุด: ' + new Date().toLocaleTimeString('th-TH');
+                    } else if (message.type === 'kdsUpdate') {
+                        console.log('📡 Received real-time KDS update:', message.data.totalRecords, 'records');
+                        console.log('📊 KDS Data:', message.data.kdsData);
+                        // Handle KDS data updates here if needed
+                    }
+                } catch (error) {
+                    console.error('WebSocket message parsing error:', error);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('🔌 WebSocket error:', error);
+                updateRealtimeStatus('disconnected', 'เชื่อมต่อไม่ได้');
+            };
+        }
+
+        function updateRealtimeStatus(status, text) {
+            const statusElement = document.querySelector('.status-indicator');
+            if (statusElement) {
+                statusElement.className = 'status-indicator ' + status;
+                statusElement.textContent = text;
+            }
+        }
+
+        // Start continuous time updates
+        function startTimeUpdates() {
+            // Update last update time every second
+            timeUpdateInterval = setInterval(() => {
+                const lastUpdateElement = document.getElementById('lastUpdate');
+                if (lastUpdateElement) {
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('th-TH');
+                    lastUpdateElement.innerHTML = '<span class="live-indicator"></span>เวลาปัจจุบัน: ' + timeStr;
+                }
+            }, 1000); // Update every second
+
+            console.log('⏰ Started continuous time updates');
+        }
+
+        // Start continuous data refresh
+        function startDataRefresh() {
+            // Refresh data every 10 seconds
+            dataRefreshInterval = setInterval(() => {
+                if (jwtToken) {
+                    console.log('🔄 Auto-refreshing queue data...');
+                    loadQueueData();
+                }
+            }, 10000); // Refresh every 10 seconds
+
+            console.log('🔄 Started continuous data refresh (10 seconds)');
+        }
+
+        // Stop all intervals
+        function stopAllIntervals() {
+            if (timeUpdateInterval) {
+                clearInterval(timeUpdateInterval);
+                timeUpdateInterval = null;
+            }
+            if (dataRefreshInterval) {
+                clearInterval(dataRefreshInterval);
+                dataRefreshInterval = null;
+            }
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function () {
+            // Get restaurant ID from URL path
+            const path = window.location.pathname;
+            const pathParts = path.split('/');
+
+            if (pathParts[1] === 'rest' && pathParts[2]) {
+                restaurantId = pathParts[2];
+                document.getElementById('currentRestId').textContent = restaurantId;
+                document.getElementById('loadingSection').style.display = 'none';
+
+                // Check if we have valid token in cookies first
+                const savedToken = getCookie('jwtToken');
+                const savedRestaurantId = getCookie('restaurantId');
+                const savedRestaurantName = getCookie('restaurantName');
+
+                if (savedToken && savedRestaurantId === restaurantId && savedRestaurantName) {
+                    // Try to use saved token
+                    console.log('🍪 Found saved token in cookies, attempting to use...');
+                    jwtToken = savedToken;
+
+                    // Update UI with saved data (no login section needed)
+                    document.getElementById('restaurantTitle').textContent = savedRestaurantName;
+                    document.getElementById('restaurantDetails').innerHTML =
+                        '<div style="font-size: 0.9em;">' +
+                        '<strong>ID:</strong> ' + savedRestaurantId + '<br>' +
+                        '<strong>ร้าน:</strong> ' + savedRestaurantName + '<br>' +
+                        '<span style="color: #28a745;">🟢 เชื่อมต่อแล้ว</span>' +
+                        '</div>';
+
+                    updateUIAfterLogin();
+
+                    // Update notification dot on load
+                    const dot = document.getElementById('notificationDot');
+                    if (notificationQueues.length > 0) {
+                        dot.style.display = 'block';
+                    }
+
+                    // Check Push Notification permission on load
+                    if ('Notification' in window) {
+                        if (Notification.permission === 'default') {
+                            console.log('💡 Push Notification permission not set, showing info');
+                        } else if (Notification.permission === 'granted') {
+                            console.log('✅ Push Notification already granted');
+                        } else {
+                            console.log('❌ Push Notification denied');
+                        }
+                    }
+
+                    console.log('✅ ใช้ข้อมูลที่บันทึกไว้สำเร็จ');
+
+                    // Try to fetch data with saved token
+                    loadQueueData().catch(() => {
+                        // If token expired, login again
+                        console.log('🔄 Token expired or invalid, logging in again...');
+                        clearSavedData();
+                        autoLogin();
+                    });
+                } else {
+                    // No valid saved data, auto login
+                    autoLogin();
+                }
+            } else {
+                showError('Invalid URL format. Please use /rest/{id}');
+                return;
+            }
+        });
+
+        // Auto login function
+        async function autoLogin() {
+            // Show login section temporarily during login
+            document.getElementById('loginSection').style.display = 'block';
+            showStatus('กำลังเข้าสู่ระบบอัตโนมัติ...', 'loading');
+            await login();
+        }
+
+        // Clear saved data
+        function clearSavedData() {
+            deleteCookie('jwtToken');
+            deleteCookie('restaurantId');
+            deleteCookie('restaurantName');
+            jwtToken = null;
+        }
+
+        // Update UI after successful login
+        function updateUIAfterLogin() {
+            // Hide login section
+            document.getElementById('loginSection').style.display = 'none';
+
+            // Show sections (restaurantInfo hidden)
+            // document.getElementById('restaurantInfo').style.display = 'block'; // Hidden
+            document.getElementById('refreshControls').style.display = 'flex';
+            document.getElementById('stats').style.display = 'grid';
+            document.getElementById('statusTabs').style.display = 'flex';
+            document.getElementById('statusPages').style.display = 'block';
+
+            // Hide loading section
+            document.getElementById('loadingSection').style.display = 'none';
+
+            // Initialize WebSocket for real-time updates
+            initWebSocketConnection();
+
+            // Start continuous updates
+            startTimeUpdates();
+            startDataRefresh();
+        }
+
+        // Login function
+        async function login() {
+            try {
+                showStatus('กำลังเข้าสู่ระบบ...', 'loading');
+
+                const response = await fetch(API_BASE + '/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        RestID: restaurantId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    jwtToken = data.data.token;
+
+                    // Save login data to cookies
+                    setCookie('jwtToken', data.data.token, 23); // 23 hours (slightly less than token expiry)
+                    setCookie('restaurantId', data.data.restaurantInfo.RestID, 23);
+                    setCookie('restaurantName', data.data.restaurantInfo.RestName, 23);
+                    setCookie('loginTime', Date.now(), 23);
+
+                    console.log('🍪 Login data saved to cookies');
+                    showStatus('✅ เข้าสู่ระบบสำเร็จ: ' + data.data.restaurantInfo.RestName, 'success');
+
+                    // Update UI
+                    document.getElementById('restaurantTitle').textContent = data.data.restaurantInfo.RestName;
+                    document.getElementById('restaurantDetails').innerHTML =
+                        '<div style="font-size: 0.9em;">' +
+                        '<strong>ID:</strong> ' + data.data.restaurantInfo.RestID + '<br>' +
+                        '<strong>ร้าน:</strong> ' + data.data.restaurantInfo.RestName + '<br>' +
+                        '<span style="color: #28a745;">🟢 เชื่อมต่อแล้ว</span>' +
+                        '</div>';
+
+                    updateUIAfterLogin();
+
+                    // Load initial queue data
+                    await loadQueueData();
+
+                } else {
+                    showStatus('❌ เข้าสู่ระบบไม่สำเร็จ: ' + data.error, 'error');
+                }
+
+            } catch (error) {
+                showStatus('❌ เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Load KDS data using JWT
+        async function loadKDSData(kdsType) {
+            if (!jwtToken) {
+                showError('กรุณาเข้าสู่ระบบก่อน');
+                return null;
+            }
+
+            try {
+                const response = await fetch(API_BASE + '/execute-kds', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: jwtToken,
+                        kdsType: kdsType
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ KDS data loaded successfully:', data.data.totalRecords, 'records for type', kdsType);
+                    return data.data.kdsData;
+                } else {
+                    console.error('❌ Failed to load KDS data:', data.error);
+                    return null;
+                }
+
+            } catch (error) {
+                console.error('❌ Error loading KDS data:', error);
+                return null;
+            }
+        }
+
+        // Load queue data using JWT
+        async function loadQueueData(queStatus = currentFilter) {
+            if (!jwtToken) {
+                showError('กรุณาเข้าสู่ระบบก่อน');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_BASE + '/execute-jwt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: jwtToken,
+                        QueStatus: queStatus === 'ALL' ? undefined : queStatus
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    allQueueData = data.data.queueData;
+                    displayQueueData(allQueueData);
+                    updateStats(allQueueData);
+                    checkNotifications(allQueueData);
+                    document.getElementById('lastUpdate').textContent = 'ข้อมูลล่าสุด: ' + new Date().toLocaleTimeString('th-TH');
+                } else {
+                    // If error indicates token issue, try to re-login
+                    if (data.error && (data.error.includes('token') || data.error.includes('Invalid') || data.error.includes('expired'))) {
+                        console.log('🔄 Token expired, clearing cookies and re-logging...');
+                        clearSavedData();
+                        await autoLogin();
+                    } else {
+                        showError(data.error || 'ไม่สามารถโหลดข้อมูลได้');
+                    }
+                }
+
+            } catch (error) {
+                showError('เกิดข้อผิดพลาด: ' + error.message);
+            }
+        }
+
+        // Format queue name with Zone first letter + QueName (3 digits with leading zeros)
+        function formatQueueName(queue) {
+            const queName = queue.QueName || '';
+            const zoneName = queue.ZoneName || queue.Zone || '';
+
+            // Get first letter of zone name
+            const zonePrefix = zoneName ? zoneName.charAt(0).toUpperCase() : '';
+
+            if (queName) {
+                // Format queue number to 3 digits with leading zeros
+                let formattedNumber;
+                if (!isNaN(queName)) {
+                    formattedNumber = queName.toString().padStart(3, '0');
+                } else {
+                    formattedNumber = queName.toString().padStart(3, '0');
+                }
+
+                // Return Zone prefix + formatted number (e.g., "A001", "B023")
+                return zonePrefix + formattedNumber;
+            }
+
+            return zonePrefix + 'N/A';
+        }
+
+        // Display queue data
+        function displayQueueData(queueData) {
+            // Use new status page system
+            displayAllStatusPages(queueData);
+        }
+
+        // Update statistics
+        function updateStats(queueData) {
+            const stats = {
+                total: queueData.length,
+                done: queueData.filter(q =>
+                    q.QueStatus === 'Done' || q.QueStatus === 'DONE' ||
+                    q.QueStatus === 'Served' || q.QueStatus === 'SERVED' ||
+                    q.QueStatus === 'Ready' || q.QueStatus === 'READY'
+                ).length
+            };
+
+            // Calculate waiting as total - done (ทั้งหมด - เสร็จแล้ว)
+            stats.waiting = stats.total - stats.done;
+
+            document.getElementById('totalQueues').textContent = stats.total;
+            document.getElementById('doneQueues').textContent = stats.done;
+            document.getElementById('waitingQueues').textContent = stats.waiting;
+        }
+
+        // Filter queues by status
+        function filterQueues(status) {
+            currentFilter = status;
+
+            // Update active tab
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Filter and display data
+            let filteredData = allQueueData;
+            if (status !== 'ALL') {
+                filteredData = allQueueData.filter(queue =>
+                    queue.QueStatus === status ||
+                    queue.QueStatus === status.toLowerCase() ||
+                    (status === 'READY' && queue.QueStatus === 'Ready') ||
+                    (status === 'COOKING' && queue.QueStatus === 'Cooking') ||
+                    (status === 'DONE' && queue.QueStatus === 'Done') ||
+                    (status === 'SERVED' && queue.QueStatus === 'Served')
+                );
+            }
+
+            displayQueueData(filteredData);
+        }
+
+        // Status page management
+        let currentStatusPage = 'READY';
+
+        function showStatusPage(status) {
+            // Update current status
+            currentStatusPage = status;
+
+            // Update tab active state
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Hide all pages
+            document.querySelectorAll('.status-page').forEach(page => page.classList.remove('active'));
+
+            // Show selected page
+            document.getElementById('page-' + status).classList.add('active');
+
+            console.log('📄 Switched to status page:', status);
+        }
+
+        // Group queue data by status (2 groups only)
+        function groupQueuesByStatus(queueData) {
+            const groups = {
+                'READY': [],
+                'WAITING': []
+            };
+
+            // Debug: Log all unique statuses found in data
+            const uniqueStatuses = [...new Set(queueData.map(q => q.QueStatus))];
+            console.log('🔍 Unique statuses found in data:', uniqueStatuses);
+
+            queueData.forEach(queue => {
+                const status = queue.QueStatus?.toUpperCase() || 'WAITING';
+
+                if (status === 'READY') {
+                    groups['READY'].push(queue);
+                } else {
+                    // All other statuses go to WAITING (COOKING, DONE, SERVED, etc.)
+                    groups['WAITING'].push(queue);
+                }
+            });
+
+            console.log('📊 Grouped queues - READY:', groups.READY.length, 'WAITING:', groups.WAITING.length);
+
+            return groups;
+        }
+
+        // Display queue data for all status pages
+        function displayAllStatusPages(queueData) {
+            const groups = groupQueuesByStatus(queueData);
+
+            // Update each status page
+            Object.keys(groups).forEach(status => {
+                const grid = document.getElementById('grid-' + status);
+                const count = document.getElementById('count-' + status);
+
+                if (grid) {
+                    displayQueueDataInGrid(groups[status], grid);
+                }
+
+                if (count) {
+                    count.textContent = groups[status].length + ' คิว';
+                }
+            });
+
+            console.log('📊 Updated status pages: พร้อมเสิร์ฟ:' + groups.READY.length +
+                ', รอดำเนินการ:' + groups.WAITING.length);
+        }
+
+        // KDS testing function removed - use loadKDSData() directly in console if needed
+
+        // Display queue data in specific grid
+        function displayQueueDataInGrid(queueData, gridElement) {
+            if (!queueData || queueData.length === 0) {
+                gridElement.innerHTML = '<div class="loading"><h3>ไม่มีข้อมูลคิว</h3></div>';
+                return;
+            }
+
+            // Check if this is "WAITING" status grid for different sorting
+            const isWaitingGrid = gridElement.id === 'grid-WAITING';
+
+            // Sort queues based on grid type
+            const sortedQueues = [...queueData].sort((a, b) => {
+                // Use QueName field for queue number
+                const aQueName = String(a.QueName || '000');
+                const bQueName = String(b.QueName || '000');
+
+                // Extract last 3 digits from QueName (e.g., K009 -> 009)
+                const aLast3 = aQueName.slice(-3);
+                const bLast3 = bQueName.slice(-3);
+
+                // Convert to numbers
+                const aNum = parseInt(aLast3, 10) || 0;
+                const bNum = parseInt(bLast3, 10) || 0;
+
+                if (isWaitingGrid) {
+                    // รอดำเนินการ: เรียงจาก a ไป b (น้อยไปมาก)
+                    console.log(`🔍 WAITING SORT: ${aQueName}(${aNum}) vs ${bQueName}(${bNum}) -> ${aNum < bNum ? aQueName + ' first' : bQueName + ' first'}`);
+                    return aNum - bNum;
+                } else {
+                    // หน้าอื่นๆ: เรียงจาก b ไป a (มากไปน้อย)
+                    console.log(`🔍 NORMAL SORT: ${aQueName}(${aNum}) vs ${bQueName}(${bNum}) -> ${bNum > aNum ? bQueName + ' first' : aQueName + ' first'}`);
+                    return bNum - aNum;
+                }
+            });
+
+            // Determine current page and pagination
+            const statusType = isWaitingGrid ? 'WAITING' : 'READY';
+            const currentPage = currentPages[statusType];
+            const totalPages = Math.ceil(sortedQueues.length / itemsPerPage);
+
+            // Calculate start and end indices for current page
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedQueues = sortedQueues.slice(startIndex, endIndex);
+
+            gridElement.innerHTML = paginatedQueues.map(queue => {
+                const status = queue.QueStatus || 'UNKNOWN';
+                const statusText = getStatusText(status);
+                console.log(`🎨 Rendering queue ${formatQueueName(queue)} with status: ${status} -> ${statusText}`);
+
+                return '<div class="queue-card">' +
+                    '<div class="queue-number"> ' + formatQueueName(queue) + '</div>' +
+                    '<div class="queue-status status-' + status + '">' + statusText + '</div>' +
+                    '</div>';
+            }).join('');
+
+            // Update pagination controls
+            updatePaginationControls(statusType, currentPage, totalPages, sortedQueues.length);
+        }
+
+        // Utility functions
+        function getStatusText(status) {
+            const statusMap = {
+                'Ready': 'พร้อมเสิร์ฟ',
+                'READY': 'พร้อมเสิร์ฟ',
+                'Cooking': 'กำลังทำ',
+                'COOKING': 'กำลังทำ',
+                'Done': 'เสร็จแล้ว',
+                'DONE': 'เสร็จแล้ว',
+                'Served': 'เสิร์ฟแล้ว',
+                'SERVED': 'เสิร์ฟแล้ว',
+                'Cancelled': 'ยกเลิก',
+                'CANCELLED': 'ยกเลิก',
+                'Pending': 'รอดำเนินการ',
+                'PENDING': 'รอดำเนินการ',
+                'Preparing': 'รอดำเนินการ',
+                'PREPARING': 'รอดำเนินการ',
+                'UNKNOWN': 'ไม่ทราบสถานะ'
+            };
+            return statusMap[status] || status || 'ไม่ทราบ';
+        }
+
+        function formatTime(timeString) {
+            if (!timeString) return 'N/A';
+            try {
+                return new Date(timeString).toLocaleString('th-TH');
+            } catch {
+                return timeString;
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('loginStatus');
+            statusDiv.innerHTML = '<div class="' + type + '">' + message + '</div>';
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 3000);
+            }
+        }
+
+        function showError(message) {
+            console.error('Error:', message);
+
+            // Wait for DOM to be ready if not yet ready
+            const displayError = () => {
+                const readyGrid = document.getElementById('grid-READY');
+                const waitingGrid = document.getElementById('grid-WAITING');
+
+                const errorHTML = '<div class="error">❌ ' + message + '</div>';
+
+                if (readyGrid) readyGrid.innerHTML = errorHTML;
+                if (waitingGrid) waitingGrid.innerHTML = errorHTML;
+
+                // Also try to show in status area if available
+                const statusArea = document.getElementById('statusArea');
+                if (statusArea) {
+                    statusArea.innerHTML = errorHTML;
+                }
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', displayError);
+            } else {
+                displayError();
+            }
+        }
+
+        // Auto re-login on token expiry
+        function handleTokenExpiry() {
+            console.log('🔄 Handling token expiry, attempting auto re-login...');
+            clearSavedData();
+
+            // Show login section and re-login status
+            document.getElementById('loginSection').style.display = 'block';
+            showStatus('🔄 Token หมดอายุ กำลังเข้าสู่ระบบใหม่...', 'loading');
+
+            // Auto re-login
+            setTimeout(() => {
+                autoLogin();
+            }, 1000);
+        }
+
+        // Pagination functions
+        function updatePaginationControls(statusType, currentPage, totalPages, totalItems) {
+            const paginationElement = document.getElementById('pagination-' + statusType);
+            const pageInfoElement = document.getElementById('page-info-' + statusType);
+            const prevButton = paginationElement.querySelector('button:first-child');
+            const nextButton = paginationElement.querySelector('button:last-child');
+
+            if (totalPages <= 1) {
+                paginationElement.style.display = 'none';
+                return;
+            }
+
+            paginationElement.style.display = 'flex';
+            pageInfoElement.textContent = `${currentPage}/${totalPages}`;
+
+            // Update button states
+            prevButton.disabled = currentPage <= 1;
+            nextButton.disabled = currentPage >= totalPages;
+        }
+
+        function changePage(statusType, direction) {
+            const currentPage = currentPages[statusType];
+            const newPage = currentPage + direction;
+
+            // Get total pages for this status
+            const statusData = statusType === 'READY' ?
+                allQueueData.filter(q => q.QueStatus?.toUpperCase() === 'READY') :
+                allQueueData.filter(q => q.QueStatus?.toUpperCase() !== 'READY');
+
+            const totalPages = Math.ceil(statusData.length / itemsPerPage);
+
+            // Validate new page
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPages[statusType] = newPage;
+
+                // Re-render the grid for this status
+                const gridElement = document.getElementById('grid-' + statusType);
+                const groups = groupQueuesByStatus(allQueueData);
+                displayQueueDataInGrid(groups[statusType], gridElement);
+
+                console.log(`📄 Changed to page ${newPage} for ${statusType}`);
+            }
+        }
+
+        function goToFirstPage(statusType) {
+            const groups = groupQueuesByStatus(allQueueData);
+            const statusData = groups[statusType];
+
+            if (statusData && statusData.length > 0) {
+                currentPages[statusType] = 1;
+
+                // Re-render the grid for this status
+                const gridElement = document.getElementById('grid-' + statusType);
+                displayQueueDataInGrid(statusData, gridElement);
+
+                console.log(`📄 Go to first page for ${statusType}`);
+            }
+        }
+
+        function goToLastPage(statusType) {
+            const groups = groupQueuesByStatus(allQueueData);
+            const statusData = groups[statusType];
+
+            if (statusData && statusData.length > 0) {
+                const totalPages = Math.ceil(statusData.length / itemsPerPage);
+                currentPages[statusType] = totalPages;
+
+                // Re-render the grid for this status
+                const gridElement = document.getElementById('grid-' + statusType);
+                displayQueueDataInGrid(statusData, gridElement);
+
+                console.log(`📄 Go to last page ${totalPages} for ${statusType}`);
+            }
+        }
+
+        // Reset pagination when switching tabs
+        function resetPagination() {
+            currentPages = { 'READY': 1, 'WAITING': 1 };
+        }
+
+        // Notification System
+        let notificationQueues = JSON.parse(localStorage.getItem('notificationQueues') || '[]');
+        let lastPlayedNotifications = new Set();
+
+        // Push Notification System
+        async function requestNotificationPermission() {
+            if ('Notification' in window) {
+                // ถ้ายังไม่เคยถาม ให้แสดง custom popup ก่อน
+                if (Notification.permission === 'default') {
+                    return new Promise((resolve) => {
+                        showPermissionPopup(resolve);
+                    });
+                } else if (Notification.permission === 'granted') {
+                    console.log('✅ Push Notification already granted');
+                    return true;
+                } else {
+                    console.log('❌ Push Notification already denied');
+                    showToast('❌ การแจ้งเตือนถูกปฏิเสธ กรุณาเปิดใช้งานในการตั้งค่าเบราว์เซอร์');
+                    return false;
+                }
+            } else {
+                console.log('❌ Push Notification not supported');
+                showToast('❌ เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน');
+                return false;
+            }
+        }
+
+        function showPermissionPopup(callback) {
+            // อัปเดต site name ให้ตรงกับ URL ปัจจุบัน
+            const siteName = document.getElementById('siteName');
+            siteName.textContent = window.location.host;
+
+            const popup = document.getElementById('permissionPopup');
+            popup.classList.add('show');
+
+            // เก็บ callback สำหรับใช้ใน handlePermissionResponse
+            window.permissionCallback = callback;
+        }
+
+        function hidePermissionPopup() {
+            const popup = document.getElementById('permissionPopup');
+            popup.classList.remove('show');
+        }
+
+        async function handlePermissionResponse(allow) {
+            hidePermissionPopup();
+
+            if (allow) {
+                // ขอสิทธิ์จริงจากเบราว์เซอร์
+                try {
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        console.log('✅ Push Notification permission granted');
+                        showToast('🔔 การแจ้งเตือนผ่านเบราว์เซอร์เปิดใช้งานแล้ว');
+                        if (window.permissionCallback) window.permissionCallback(true);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error requesting permission:', error);
+                }
+                showToast('❌ การขอสิทธิ์ไม่สำเร็จ');
+                if (window.permissionCallback) window.permissionCallback(false);
+            } else {
+                console.log('❌ User blocked notification permission');
+                showToast('การแจ้งเตือนถูกบล็อก');
+                if (window.permissionCallback) window.permissionCallback(false);
+            }
+        }
+
+        function showPushNotification(queueNumber) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification(`🔔 คิว ${queueNumber} พร้อมเสิร์ฟ!`, {
+                    body: `คิวของคุณ ${queueNumber} พร้อมเสิร์ฟแล้ว กรุณามารับคิวที่เคาน์เตอร์`,
+                    icon: 'https://thanvasu.com/CRM/161/Logo/Logo2.jpg',
+                    badge: 'https://thanvasu.com/CRM/161/Logo/Logo2.jpg',
+                    tag: `queue-${queueNumber}`,
+                    requireInteraction: true,
+                    actions: [
+                        {
+                            action: 'view',
+                            title: 'ดูรายการคิว',
+                            icon: '👀'
+                        }
+                    ],
+                    data: {
+                        queueNumber: queueNumber,
+                        timestamp: Date.now()
+                    }
+                });
+
+                notification.onclick = function () {
+                    window.focus();
+                    this.close();
+                };
+
+                // Auto close after 10 seconds
+                setTimeout(() => {
+                    notification.close();
+                }, 10000);
+
+                return notification;
+            }
+            return null;
+        }
+
+        function openNotificationModal() {
+            document.getElementById('notificationModal').style.display = 'block';
+            document.getElementById('notificationQueue').value = '';
+            updateNotificationList();
+        }
+
+        function closeNotificationModal() {
+            document.getElementById('notificationModal').style.display = 'none';
+        }
+
+        async function saveNotificationSetting() {
+            const queueInput = document.getElementById('notificationQueue');
+            const queueNumber = queueInput.value.trim().toUpperCase();
+
+            if (queueNumber && !notificationQueues.includes(queueNumber)) {
+                // Request Push Notification permission
+                const permissionGranted = await requestNotificationPermission();
+
+                notificationQueues.push(queueNumber);
+                localStorage.setItem('notificationQueues', JSON.stringify(notificationQueues));
+                updateNotificationList();
+                queueInput.value = '';
+
+                if (permissionGranted) {
+                    showToast(`เพิ่มการแจ้งเตือนสำหรับคิว ${queueNumber} แล้ว (รวม Push Notification)`);
+                } else {
+                    showToast(`เพิ่มการแจ้งเตือนสำหรับคิว ${queueNumber} แล้ว (เฉพาะเสียงและข้อความ)`);
+                }
+            } else if (notificationQueues.includes(queueNumber)) {
+                showToast(` ${queueNumber} มีในรายการแจ้งเตือนแล้ว`);
+            } else {
+                showToast('กรุณากรอกเลขคิว');
+            }
+        }
+
+        function removeNotification(queueNumber) {
+            notificationQueues = notificationQueues.filter(q => q !== queueNumber);
+            localStorage.setItem('notificationQueues', JSON.stringify(notificationQueues));
+            updateNotificationList();
+            showToast(`ลบการแจ้งเตือนคิว ${queueNumber} แล้ว`);
+        }
+
+        function updateNotificationList() {
+            const listElement = document.getElementById('notificationList');
+            if (notificationQueues.length === 0) {
+                listElement.innerHTML = '<p style="color: #666; text-align: center;">ยังไม่มีคิวที่ตั้งแจ้งเตือน</p>';
+            } else {
+                listElement.innerHTML = '<h4 style="color: #C10130; margin-bottom: 10px;">📋 รายการแจ้งเตือน:</h4>' +
+                    notificationQueues.map(queue =>
+                        `<div style="background: #f8f9fa; padding: 10px; margin: 5px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>คิว: ${queue}</span>
+                            <button onclick="removeNotification('${queue}')" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">ลบ</button>
+                        </div>`
+                    ).join('');
+            }
+        }
+
+        function checkNotifications(queueData) {
+            const readyQueues = queueData.filter(q => q.QueStatus?.toUpperCase() === 'READY');
+            let hasNewNotification = false;
+
+            readyQueues.forEach(queue => {
+                const queueNumber = queue.QueName?.toUpperCase();
+                if (notificationQueues.includes(queueNumber) && !lastPlayedNotifications.has(queueNumber)) {
+                    playNotificationSound();
+                    showNotificationAlert(queueNumber);
+                    showPushNotification(queueNumber); // Push Notification
+                    lastPlayedNotifications.add(queueNumber);
+                    hasNewNotification = true;
+
+                    // Remove from notification list after alerting
+                    setTimeout(() => {
+                        removeNotification(queueNumber);
+                    }, 1000);
+                }
+            });
+
+            // Update notification dot
+            const dot = document.getElementById('notificationDot');
+            const bell = document.querySelector('.notification-bell');
+            if (hasNewNotification) {
+                dot.style.display = 'block';
+                bell.classList.add('active');
+                setTimeout(() => {
+                    bell.classList.remove('active');
+                }, 500);
+            } else if (notificationQueues.length === 0) {
+                dot.style.display = 'none';
+            }
+        }
+
+        function playNotificationSound() {
+            // Create audio context for notification sound
+            if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.5);
+            }
+        }
+
+        function showNotificationAlert(queueNumber) {
+            showToast(`🔔 คิว ${queueNumber} พร้อมเสิร์ฟแล้ว!`, 5000);
+            showAlertPopup(queueNumber); // เพิ่ม popup แจ้งเตือน
+        }
+
+        function showAlertPopup(queueNumber) {
+            const popup = document.getElementById('alertPopup');
+            const overlay = document.getElementById('popupOverlay');
+            const queueNumberElement = document.getElementById('popupQueueNumber');
+
+            queueNumberElement.textContent = queueNumber;
+
+            overlay.classList.add('show');
+            popup.classList.add('show');
+
+            // Auto hide after 15 seconds
+            setTimeout(() => {
+                hideAlertPopup();
+            }, 15000);
+        }
+
+        function hideAlertPopup() {
+            const popup = document.getElementById('alertPopup');
+            const overlay = document.getElementById('popupOverlay');
+
+            overlay.classList.remove('show');
+            popup.classList.remove('show');
+        }
+
+        function showToast(message, duration = 3000) {
+            // Remove existing toast
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #C10130;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                z-index: 10000;
+                font-weight: bold;
+                max-width: 300px;
+                word-wrap: break-word;
+            `;
+
+            document.body.appendChild(toast);
+
+            // Auto remove
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, duration);
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function (event) {
+            const modal = document.getElementById('notificationModal');
+            if (event.target === modal) {
+                closeNotificationModal();
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function () {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+            stopAllIntervals();
+        });
+    </script>
+
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="notification-modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeNotificationModal()">&times;</span>
+            <h3>🔔 ตั้งค่าแจ้งเตือน</h3>
+            <p>กรอกเลขคิวที่ต้องการให้แจ้งเตือนเมื่อพร้อมเสิร์ฟ</p>
+            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                💡 แต่ละเครื่อง/มือถือจะตั้งค่าแจ้งเตือนได้แยกกัน
+            </p>
+            <input type="text" id="notificationQueue" placeholder="เลขคิว (เช่น A001, B015)" maxlength="10">
+            <div class="modal-buttons">
+                <button class="modal-btn save" onclick="saveNotificationSetting()">บันทึก</button>
+            </div>
+            <p style="font-size: 12px; color: #666; margin-top: 15px; text-align: center;">
+                💡 เมื่อกดบันทึก ระบบจะขอสิทธิ์แจ้งเตือนผ่านเบราว์เซอร์
+            </p>
+            <div id="notificationList" style="margin-top: 20px; text-align: left;"></div>
+        </div>
+    </div>
+
+    <!-- Alert Popup -->
+    <div id="popupOverlay" class="popup-overlay" onclick="hideAlertPopup()"></div>
+    <div id="alertPopup" class="alert-popup">
+        <h2>🔔 คิวพร้อมเสิร์ฟ!</h2>
+        <div class="queue-number" id="popupQueueNumber">A001</div>
+        <p>คิวของคุณพร้อมเสิร์ฟแล้ว<br>กรุณามารับคิวที่เคาน์เตอร์</p>
+        <button class="close-btn" onclick="hideAlertPopup()">รับทราบ</button>
+    </div>
+
+    <!-- Permission Popup -->
+    <div id="permissionPopup" class="permission-popup">
+        <div class="permission-header">
+            <div class="icon"></div>
+            <span class="site-name" id="siteName">q-gongcha.thanvasupos.com</span>
+        </div>
+        <div class="permission-content">
+            <div class="message">
+                🔔 <strong>Gongcha Queue</strong> ต้องการส่งการแจ้งเตือนให้คุณ<br>
+                เพื่อแจ้งเตือนเมื่อคิวของคุณพร้อมเสิร์ฟ
+            </div>
+            <div class="permission-buttons">
+                <button class="permission-btn block" onclick="handlePermissionResponse(false)">บล็อก</button>
+                <button class="permission-btn allow" onclick="handlePermissionResponse(true)">อนุญาต</button>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

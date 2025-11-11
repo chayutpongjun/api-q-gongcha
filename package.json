@@ -7,11 +7,10 @@
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
     "docker:build": "docker build -t gongcha-api:latest .",
-    "docker:run": "docker run -d -p 10001:10001 --name gongcha-api gongcha-api:latest",
+    "docker:run": "docker run -d -p 10000:10000 --name gongcha-api gongcha-api:latest",
     "docker:push": "docker push thanvasu/q-gongcha-api:latest"
   },
   "dependencies": {
-    "axios": "^1.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",

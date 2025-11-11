@@ -12,39 +12,33 @@ RUN apk add --no-cache \
     unixodbc \
     unixodbc-dev \
     freetds \
-    freetds-dev \
-    wget
+    freetds-dev
 
-# Copy package files first (for better caching)
+# Copy package files
 COPY package*.json ./
 
 # Install Node.js dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production
 
 # Copy application code
-COPY backend ./backend
-COPY public ./public
+COPY . .
 
 # Create necessary directories
-RUN mkdir -p logs public/tts && \
-    chmod -R 755 public/tts
+RUN mkdir -p logs
 
-# Expose API port
-EXPOSE 10001
+# Expose API port only
+EXPOSE 10000
 
-# Set environment variables (defaults - override with docker run -e)
+# Set environment variables
 ENV NODE_ENV=production
-ENV PORT=10001
-ENV HOST=0.0.0.0
+ENV PORT=10000
 ENV DB_MAIN_SERVER=203.150.191.149,28914
 ENV DB_MAIN_DATABASE=CFS_Gongcha_Main
 ENV DB_MAIN_USER=gongcha
-ENV DB_MAIN_PASSWORD=Faofao000@
-ENV JWT_SECRET=your_jwt_secret_here
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:10001/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:10000/health || exit 1
 
 # Start the API server
-CMD ["node", "backend/server.js"]
+CMD ["npm", "start"]

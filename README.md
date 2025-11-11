@@ -73,7 +73,7 @@ Q-Mobile-Gongcha/
    DB_MAIN_DATABASE=CFS_Gongcha_Main
    DB_MAIN_USER=your_username
    DB_MAIN_PASSWORD=your_password
-   PORT=10001
+   PORT=10000
    ```
 
 5. Start the backend server:
@@ -213,7 +213,7 @@ npm start
 ### Common Issues
 
 1. **Database Connection Failed**: ตรวจสอบ .env file และ SQL Server connection
-2. **API Not Responding**: ตรวจสอบว่า Backend server รันอยู่ที่ port 10001
+2. **API Not Responding**: ตรวจสอบว่า Backend server รันอยู่ที่ port 10000
 3. **Metro Bundle Error**: ลบ node_modules และ install ใหม่
 
 ### Debug Mode

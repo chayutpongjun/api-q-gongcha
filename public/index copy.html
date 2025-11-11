@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gongcha Queue</title>
+    <style>
+        /* --- ตัดมาเฉพาะส่วน CSS หลักเพื่อความกระชับ --- */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #C10130 0%, #a50e2a 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header {
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 3px solid #C10130;
+            background: white;
+            position: relative;
+        }
+
+        .logo img {
+            width: 100px;
+            border-radius: 50%;
+            border: 4px solid #C10130;
+        }
+
+        .status-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 18px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .tab.active {
+            background: #28a745;
+            color: white;
+        }
+
+        .queue-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            padding: 20px;
+        }
+
+        .queue-card {
+            background: linear-gradient(135deg, #fff, #f9f9f9);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .queue-number {
+            font-size: 2em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ab772b, #946623);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .queue-status {
+            padding: 10px 15px;
+            border-radius: 25px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .status-READY {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .status-WAITING {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+        }
+
+        .notification-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .modal-btn.save {
+            background: #C10130;
+            color: white;
+        }
+
+        .modal-btn.cancel {
+            background: #ddd;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            margin: 15px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <img src="https://thanvasu.com/CRM/161/Logo/Logo2.jpg" alt="Logo" />
+            </div>
+            <h1 id="restaurantTitle">Gongcha Queue</h1>
+        </div>
+
+        <div class="status-tabs">
+            <button class="tab active" onclick="showStatusPage('READY', event)">พร้อมเสิร์ฟ</button>
+            <button class="tab" onclick="showStatusPage('WAITING', event)">รอดำเนินการ</button>
+        </div>
+
+        <div id="page-READY" class="queue-grid"></div>
+        <div id="page-WAITING" class="queue-grid" style="display:none;"></div>
+    </div>
+
+    <!-- 🏪 Modal เลือกสาขา -->
+    <div id="branchModal" class="notification-modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeBranchModal()" style="float:right;cursor:pointer;">&times;</span>
+            <h3>🏪 เลือกสาขา</h3>
+            <p>กรุณาเลือกสาขาที่ต้องการดูคิว</p>
+            <div id="branchLoader">กำลังโหลดรายชื่อสาขา...</div>
+            <select id="branchSelect" style="width:100%;padding:10px;border-radius:8px;display:none;">
+                <option value="">-- เลือกสาขา --</option>
+            </select>
+            <div class="modal-buttons">
+                <button class="modal-btn save" onclick="redirectToBranch()">ยืนยัน</button>
+                <button class="modal-btn cancel" onclick="closeBranchModal()">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const API_BASE = 'http://localhost:10000/api/queue'; // ✅ backend URL
+        const pathParts = window.location.pathname.split('/');
+        const hasRestPath = pathParts[1] === 'rest' && pathParts[2];
+        let restaurantId = hasRestPath ? pathParts[2] : null;
+
+        if (!hasRestPath) {
+            // ===== หน้าเลือกสาขา =====
+            document.body.innerHTML = `
+      <div style="font-family:'Kanit',sans-serif;text-align:center;margin-top:10vh">
+        <h2>🧋 เลือกสาขาเพื่อดูคิว</h2>
+        <select id="branchSelect" style="padding:12px 20px;font-size:18px;border-radius:8px;margin:20px">
+          <option value="">-- กำลังโหลดข้อมูลสาขา --</option>
+        </select><br>
+        <button id="enterBranch"
+          style="padding:10px 25px;border:none;border-radius:8px;
+          background:#C10130;color:white;font-size:18px;cursor:pointer">
+          เข้าสู่หน้าคิว
+        </button>
+      </div>
+    `;
+
+            // โหลดสาขาจาก API
+            fetch(`${API_BASE}/branches`)
+                .then(res => res.json())
+                .then(data => {
+                    const select = document.getElementById('branchSelect');
+                    select.innerHTML = '<option value="">-- เลือกสาขา --</option>';
+                    if (data.success && Array.isArray(data.data)) {
+                        data.data.forEach(b => {
+                            const opt = document.createElement('option');
+                            opt.value = b.RestID;
+                            opt.textContent = b.RestName;
+                            select.appendChild(opt);
+                        });
+                    } else {
+                        select.innerHTML = '<option>ไม่พบข้อมูลสาขา</option>';
+                    }
+                })
+                .catch(err => {
+                    console.error('Error loading branches:', err);
+                    document.getElementById('branchSelect').innerHTML =
+                        '<option>ไม่สามารถโหลดข้อมูลได้</option>';
+                });
+
+            document.addEventListener('click', (e) => {
+                if (e.target.id === 'enterBranch') {
+                    const id = document.getElementById('branchSelect').value;
+                    if (!id) return alert('กรุณาเลือกสาขาก่อน');
+                    window.location.href = `/rest/${id}`;
+                }
+            });
+            return; // ❌ หยุดการโหลดคิว เพราะยังไม่เลือกสาขา
+        }
+
+        // ====== โค้ดส่วนหลักของหน้าคิว ======
+        initWebSocket();
+        loadQueueData();
+
+        function initWebSocket() {
+            const WS_URL = `${location.origin.replace(/^http/, 'ws')}/ws`;
+            let ws = new WebSocket(WS_URL);
+            ws.onopen = () => console.log('✅ WS connected');
+            ws.onmessage = (e) => {
+                try {
+                    const msg = JSON.parse(e.data);
+                    if (msg.type === 'queueUpdate') updateQueues(msg.data);
+                } catch { }
+            };
+            ws.onclose = () => setTimeout(initWebSocket, 3000);
+        }
+
+        function loadQueueData() {
+            fetch(`${API_BASE}/execute?RestID=${restaurantId}`)
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success && d.data?.queueData) updateQueues(d.data.queueData);
+                    else console.error('⚠️ Failed to execute queue data flow');
+                })
+                .catch(err => console.error('Fetch error', err));
+        }
+
+        function updateQueues(data) {
+            console.log('Queue data:', data);
+            // ที่เหลือคือ logic อัปเดต DOM ตามที่มิมิทำไว้
+        }
+    });
+</script>
+
+</body>
+
+</html>
+
+
+<!--
+const express = require('express');
+const sql = require('mssql');
+const router = express.Router();
+
+// ดึงข้อมูลคิว
+router.get('/execute', async (req, res) => {
+  const { RestID } = req.query;
+  if (!RestID) return res.json({ success: false, error: 'Missing RestID' });
+  try {
+    const pool = await sql.connect({
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      server: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      options: { encrypt: false },
+    });
+    const result = await pool.request()
+      .input('QueStatus', sql.NVarChar, 'ALL')
+      .input('ZoneID', sql.Int, 0)
+      .execute('Sp_TB_QueOrderStatus');
+    res.json({ success: true, data: { queueData: result.recordset } });
+  } catch (err) {
+    console.error('❌', err);
+    res.json({ success: false, error: 'Failed to execute queue data flow' });
+  }
+});
+
+// ดึงรายชื่อสาขา
+router.get('/branches', async (req, res) => {
+  try {
+    const pool = await sql.connect({
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      server: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      options: { encrypt: false },
+    });
+    const result = await pool.request()
+      .query(`SELECT RestID, RestName FROM Tbl_Rest ORDER BY RestName`);
+    res.json({ success: true, data: result.recordset });
+  } catch (err) {
+    console.error('❌', err);
+    res.json({ success: false, error: 'Failed to load branch list' });
+  }
+});
+
+module.exports = router;
+-->
