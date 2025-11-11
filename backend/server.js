@@ -30,22 +30,50 @@ const wss = new WebSocket.Server({
 // Store WebSocket connections by restaurant ID
 const restaurantConnections = new Map();
 
-app.use(express.json());
-app.use(express.static("public"));
+// CORS Configuration - MUST BE FIRST before other middleware
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'https://q-gongcha.thanvasupos.com',
+      'http://q-gongcha.thanvasupos.com',
+      'http://localhost:8080',
+      'http://localhost:3000'
+    ];
 
-// ✅ Serve static files (index.html, tts, etc.)
-app.use(express.static(path.join(__dirname, '../public')));
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log(`⚠️  CORS blocked origin: ${origin}`);
+      callback(null, true); // Allow anyway for debugging
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Length', 'X-JSON'],
+  maxAge: 86400, // 24 hours
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
 
 // Middleware
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Allow inline styles for now
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: false
   })
 );
-app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ✅ Serve static files (index.html, tts, etc.)
+app.use(express.static(path.join(__dirname, '../public')));
 
 // API Routes
 app.use('/api/queue', queueRoutes);
