@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gongcha Queue</title>
+    <title>DuckieDoze Queue</title>
     <style>
         * {
             margin: 0;
@@ -1017,7 +1017,7 @@
                 <img src="https://thanvasu.com/CRM/161/Logo/Logo2.jpg" alt="Logo"
                     onerror="this.style.display='none'; this.parentNode.innerHTML='🧋';">
             </div>
-            <h1 id="restaurantTitle">Gongcha Queue</h1>
+            <h1 id="restaurantTitle">DuckieDoze Queue</h1>
         </div>
 
         <div class="content">
@@ -1128,7 +1128,7 @@
         const itemsPerPage = 10;
 
         // API Base URL - Use production API (HTTPS works from HTTP localhost)
-        const API_BASE = `https://api-q-gongcha.thanvasupos.com/api/queue`;
+        const API_BASE = `https://api-q-DuckieDoze.thanvasupos.com/api/queue`;
 
         // Cookie management functions
         function setCookie(name, value, hours = 24) {
@@ -1154,7 +1154,7 @@
 
         // WebSocket real-time connection
         function initWebSocketConnection() {
-            const wsUrl = `wss://api-q-gongcha.thanvasupos.com`;
+            const wsUrl = `wss://api-q-DuckieDoze.thanvasupos.com`;
             ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
@@ -2191,11 +2191,11 @@
     <div id="permissionPopup" class="permission-popup">
         <div class="permission-header">
             <div class="icon"></div>
-            <span class="site-name" id="siteName">q-gongcha.thanvasupos.com</span>
+            <span class="site-name" id="siteName">q-DuckieDoze.thanvasupos.com</span>
         </div>
         <div class="permission-content">
             <div class="message">
-                🔔 <strong>Gongcha Queue</strong> ต้องการส่งการแจ้งเตือนให้คุณ<br>
+                🔔 <strong>DuckieDoze Queue</strong> ต้องการส่งการแจ้งเตือนให้คุณ<br>
                 เพื่อแจ้งเตือนเมื่อคิวของคุณพร้อมเสิร์ฟ
             </div>
             <div class="permission-buttons">

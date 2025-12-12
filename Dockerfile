@@ -32,9 +32,9 @@ EXPOSE 10000
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=10000
-ENV DB_MAIN_SERVER=203.150.191.149,28914
-ENV DB_MAIN_DATABASE=CFS_Gongcha_Main
-ENV DB_MAIN_USER=gongcha
+ENV DB_MAIN_SERVER=tvsdb1.thanvasupos.com,28914
+ENV DB_MAIN_DATABASE=CFS_DuckieDoze_Main
+ENV DB_MAIN_USER=uinet
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

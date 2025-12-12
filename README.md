@@ -1,8 +1,8 @@
-# Gongcha Queue Management Mobile App
+# DuckieDoze Queue Management Mobile App
 
 ## Overview
 
-ระบบดู Q ผ่านมือถือสำหรับ Gongcha ที่เชื่อมต่อกับ SQL Server Database
+ระบบดู Q ผ่านมือถือสำหรับ DuckieDoze ที่เชื่อมต่อกับ SQL Server Database
 
 ## Features
 
@@ -16,7 +16,7 @@
 ## Project Structure
 
 ```
-Q-Mobile-Gongcha/
+Q-Mobile-DuckieDoze/
 ├── backend/                 # Node.js API Server
 │   ├── services/
 │   │   └── databaseService.js
@@ -70,7 +70,7 @@ Q-Mobile-Gongcha/
 
    ```
    DB_MAIN_SERVER=your_main_server_name
-   DB_MAIN_DATABASE=CFS_Gongcha_Main
+   DB_MAIN_DATABASE=CFS_DuckieDoze_Main
    DB_MAIN_USER=your_username
    DB_MAIN_PASSWORD=your_password
    PORT=10000
@@ -136,7 +136,7 @@ GET /api/queue/health
 
 ## Database Schema
 
-### Main Database (CFS_Gongcha_Main)
+### Main Database (CFS_DuckieDoze_Main)
 
 Table: `Tbl_Rest`
 
@@ -222,4 +222,4 @@ npm start
 
 ## License
 
-Private project for Gongcha Queue Management System
+Private project for DuckieDoze Queue Management System

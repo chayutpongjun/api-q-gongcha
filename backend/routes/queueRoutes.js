@@ -33,7 +33,7 @@ router.post('/login', async (req, res) => {
              [RestDBName],
              [RestUserName],
              [RestPassword]
-      FROM [CFS_Gongcha_Main].[dbo].[Tbl_Rest]
+      FROM [CFS_DuckieDoze_Main].[dbo].[Tbl_Rest]
       WHERE [RestID] = @RestId
     `);
 
@@ -257,7 +257,7 @@ router.get('/:restId', async (req, res) => {
              [RestDBName],
              [RestUserName],
              [RestPassword]
-      FROM [CFS_Gongcha_Main].[dbo].[Tbl_Rest]
+      FROM [CFS_DuckieDoze_Main].[dbo].[Tbl_Rest]
       WHERE [RestID] = @RestId
     `);
 

@@ -1,26 +1,26 @@
 #!/bin/bash
 
-# Gongcha Queue Management System - Docker Build Script
+# DuckieDoze Queue Management System - Docker Build Script
 
-echo "🚀 Building Gongcha Queue Management System Docker Image..."
+echo "🚀 Building DuckieDoze Queue Management System Docker Image..."
 
 # Build the Docker image
-docker build -t gongcha-queue:latest .
+docker build -t DuckieDoze-queue:latest .
 
 if [ $? -eq 0 ]; then
     echo "✅ Docker image built successfully!"
     echo "📊 Image size:"
-    docker images gongcha-queue:latest
+    docker images DuckieDoze-queue:latest
     
     echo ""
     echo "� To run the container:"
-    echo "docker run -d -p 10000:10000 -p 8080:8080 --name gongcha-queue gongcha-queue:latest"
+    echo "docker run -d -p 10000:10000 -p 8080:8080 --name DuckieDoze-queue DuckieDoze-queue:latest"
     echo ""
     echo "🔄 To stop the container:"
-    echo "docker stop gongcha-queue"
+    echo "docker stop DuckieDoze-queue"
     echo ""
     echo "🗑️ To remove the container:"
-    echo "docker rm gongcha-queue"
+    echo "docker rm DuckieDoze-queue"
     echo ""
     echo "📱 Access URLs:"
     echo "- API: http://localhost:10000/health"

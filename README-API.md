@@ -1,6 +1,6 @@
-# Gongcha Queue API Server
+# DuckieDoze Queue API Server
 
-API Server สำหรับระบบจัดการคิว Gongcha
+API Server สำหรับระบบจัดการคิว DuckieDoze
 
 ## Features
 
@@ -20,9 +20,9 @@ API Server สำหรับระบบจัดการคิว Gongcha
 
 ```
 PORT=10000
-DB_MAIN_SERVER=203.150.191.149,28914
-DB_MAIN_DATABASE=CFS_Gongcha_Main
-DB_MAIN_USER=gongcha
+DB_MAIN_SERVER=tvsdb1.thanvasupos.com,28914
+DB_MAIN_DATABASE=CFS_DuckieDoze_Main
+DB_MAIN_USER=uinet
 DB_MAIN_PASSWORD=your_password
 JWT_SECRET=your_jwt_secret
 ```
@@ -37,8 +37,8 @@ npm start
 ## Docker
 
 ```bash
-docker build -t gongcha-api .
-docker run -d -p 10000:10000 gongcha-api
+docker build -t DuckieDoze-api .
+docker run -d -p 10000:10000 DuckieDoze-api
 ```
 
 ## Production URLs

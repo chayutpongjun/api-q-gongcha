@@ -1,485 +1,506 @@
 <!DOCTYPE html>
 <html lang="th">
-
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gongcha Queue Display</title>
+    <title>DuckieDoze Queue Display</title>
     <style>
+      :root {
+        --video-width: 470px;
+        --video-height: 264px;
+        --qr-width: 180px;
+        --qr-height: 180px;
+        --color-waiting: #b3832c;
+        --color-ready: #28a745;
+        --color-accent: #c10130;
+        --color-bg: #fff6f8;
+      }
+
+      body {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        font-family: "Kanit", sans-serif;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+        overflow: hidden;
+      }
+
+      .tv-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        max-width: 1600px;
+        margin: auto;
+      }
+
+      .tv-top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+
+      .tv-current-queue {
+        width: 550px;
+        height: 200px;
+        background: #fff;
+        border-radius: 20px;
+        padding: 30px 20px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .tv-current-queue h3 {
+        color: #28a745;
+        font-weight: 700;
+        font-size: 1.6rem;
+        margin: 0 0 15px 0;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .tv-current-queue-number {
+        font-size: 4.5rem;
+        font-weight: 900;
+        color: #28a745;
+        letter-spacing: 2px;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: blink 3s ease-in-out infinite;
+      }
+
+      @keyframes blink {
+        0%,
+        90%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+
+        93% {
+          opacity: 0.3;
+          transform: scale(1.1);
+        }
+
+        96% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .tv-current-queue-number .zone-initial {
+        font-size: inherit;
+        margin-right: 8px;
+      }
+
+      .tv-current-queue-empty {
+        font-size: 1.8rem;
+        color: #999;
+        font-weight: 600;
+      }
+
+      .tv-video-box {
+        width: var(--video-width);
+        height: var(--video-height);
+        background: #000;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+      }
+
+      .tv-video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .tv-qr-box {
+        flex: 1;
+        min-width: 260px;
+        text-align: center;
+        background: #fff;
+        border-radius: 20px;
+        padding: 20px 10px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .tv-qr-box img {
+        width: var(--qr-width);
+        height: var(--qr-height);
+        border-radius: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        object-fit: contain;
+      }
+
+      .tv-qr-box h3 {
+        color: var(--color-accent);
+        font-weight: 700;
+        font-size: 1.4rem;
+        margin: 0;
+      }
+
+      .tv-divider {
+        border: none;
+        height: 3px;
+        background: linear-gradient(90deg, #c10130, #ab772b);
+        border-radius: 3px;
+      }
+
+      .tv-bottom-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+
+      .status-page-box {
+        background: #fff;
+        border-radius: 24px;
+        padding: 20px;
+        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
+        min-height: 420px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .status-title {
+        text-align: center;
+        font-size: 2em;
+        font-weight: 800;
+        margin-bottom: 12px;
+      }
+
+      .status-title.waiting {
+        color: var(--color-waiting);
+      }
+
+      .status-title.ready {
+        color: var(--color-ready);
+      }
+
+      .grid-3x3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        flex: 1;
+        align-items: stretch;
+      }
+
+      .queue-card-large {
+        background: #fff;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 120px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        text-align: center;
+        color: inherit;
+      }
+
+      .queue-card-large.waiting {
+        color: var(--color-waiting);
+      }
+
+      .queue-card-large.ready {
+        color: var(--color-ready);
+      }
+
+      .queue-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: inherit;
+      }
+
+      .zone-initial {
+        font-size: inherit;
+        /* ✅ ทำให้ขนาดเท่ากับเลข */
+        font-weight: inherit;
+        margin-right: 4px;
+        color: inherit;
+      }
+
+      @media (max-width: 900px) {
         :root {
-            --video-width: 470px;
-            --video-height: 264px;
-            --qr-width: 180px;
-            --qr-height: 180px;
-            --color-waiting: #b3832c;
-            --color-ready: #28a745;
-            --color-accent: #C10130;
-            --color-bg: #fff6f8;
-        }
-
-        body {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            font-family: 'Kanit', sans-serif;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-            overflow: hidden;
-        }
-
-        .tv-layout {
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            max-width: 1600px;
-            margin: auto;
+          --video-width: 100%;
+          --video-height: auto;
+          --qr-width: 150px;
+          --qr-height: 150px;
         }
 
         .tv-top-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 24px;
-            flex-wrap: wrap;
-        }
-
-        .tv-current-queue {
-            width: 550px;
-            height: 200px;
-            background: #fff;
-            border-radius: 20px;
-            padding: 30px 20px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-
-        }
-
-
-
-        .tv-current-queue h3 {
-            color: #28a745;
-            font-weight: 700;
-            font-size: 1.6rem;
-            margin: 0 0 15px 0;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .tv-current-queue-number {
-            font-size: 4.5rem;
-            font-weight: 900;
-            color: #28a745;
-            letter-spacing: 2px;
-            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: blink 3s ease-in-out infinite;
-        }
-
-        @keyframes blink {
-
-            0%,
-            90%,
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            93% {
-                opacity: 0.3;
-                transform: scale(1.1);
-            }
-
-            96% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .tv-current-queue-number .zone-initial {
-            font-size: inherit;
-            margin-right: 8px;
-        }
-
-        .tv-current-queue-empty {
-            font-size: 1.8rem;
-            color: #999;
-            font-weight: 600;
+          flex-direction: column;
+          align-items: center;
         }
 
         .tv-video-box {
-            width: var(--video-width);
-            height: var(--video-height);
-            background: #000;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+          width: 100%;
+          max-width: 600px;
+          height: auto;
         }
-
-        .tv-video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .tv-qr-box {
-            flex: 1;
-            min-width: 260px;
-            text-align: center;
-            background: #fff;
-            border-radius: 20px;
-            padding: 20px 10px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .tv-qr-box img {
-            width: var(--qr-width);
-            height: var(--qr-height);
-            border-radius: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-            object-fit: contain;
-        }
-
-        .tv-qr-box h3 {
-            color: var(--color-accent);
-            font-weight: 700;
-            font-size: 1.4rem;
-            margin: 0;
-        }
-
-        .tv-divider {
-            border: none;
-            height: 3px;
-            background: linear-gradient(90deg, #C10130, #ab772b);
-            border-radius: 3px;
-        }
-
-        .tv-bottom-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 32px;
-        }
-
-        .status-page-box {
-            background: #fff;
-            border-radius: 24px;
-            padding: 20px;
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
-            min-height: 420px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .status-title {
-            text-align: center;
-            font-size: 2em;
-            font-weight: 800;
-            margin-bottom: 12px;
-        }
-
-        .status-title.waiting {
-            color: var(--color-waiting);
-        }
-
-        .status-title.ready {
-            color: var(--color-ready);
-        }
-
-        .grid-3x3 {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            flex: 1;
-            align-items: stretch;
-        }
-
-        .queue-card-large {
-            background: #fff;
-            border-radius: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 120px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            text-align: center;
-            color: inherit;
-        }
-
-        .queue-card-large.waiting {
-            color: var(--color-waiting);
-        }
-
-        .queue-card-large.ready {
-            color: var(--color-ready);
-        }
-
-        .queue-number {
-            font-size: 2.5rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: inherit;
-        }
-
-        .zone-initial {
-            font-size: inherit;
-            /* ✅ ทำให้ขนาดเท่ากับเลข */
-            font-weight: inherit;
-            margin-right: 4px;
-            color: inherit;
-        }
-
-        @media (max-width: 900px) {
-            :root {
-                --video-width: 100%;
-                --video-height: auto;
-                --qr-width: 150px;
-                --qr-height: 150px;
-            }
-
-            .tv-top-row {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .tv-video-box {
-                width: 100%;
-                max-width: 600px;
-                height: auto;
-            }
-        }
+      }
     </style>
-</head>
+  </head>
 
-<body>
+  <body>
     <div class="tv-layout">
-        <div class="tv-top-row">
-            <div class="tv-video-box">
-                <video autoplay loop muted playsinline class="tv-video">
-                    <source src="https://thanvasu.com/CRM/161/QR/VDO.mp4" type="video/mp4" />
-                </video>
-            </div>
-            <div class="tv-current-queue" id="currentQueue">
-                <h3>🔔 คิวพร้อมเสิร์ฟ</h3>
-                <div class="tv-current-queue-number" id="currentQueueNumber">
-                    <span class="tv-current-queue-empty">-</span>
-                </div>
-            </div>
-            <div class="tv-qr-box">
-                <img src="https://thanvasu.com/CRM/161/QR/CTW.jpg" alt="QR Code" />
-                <h3>สแกนเพื่อสั่งเครื่องดื่ม</h3>
-            </div>
+      <div class="tv-top-row">
+        <div class="tv-video-box">
+          <video autoplay loop muted playsinline class="tv-video">
+            <source
+              src="https://thanvasu.com/CRM/161/QR/VDO.mp4"
+              type="video/mp4"
+            />
+          </video>
         </div>
-
-        <hr class="tv-divider" />
-
-        <div class="tv-bottom-row">
-            <div class="status-page-box">
-                <h2 class="status-title waiting">รอดำเนินการ</h2>
-                <div class="grid-3x3" id="grid-WAITING"></div>
-            </div>
-            <div class="status-page-box">
-                <h2 class="status-title ready">พร้อมเสิร์ฟ</h2>
-                <div class="grid-3x3" id="grid-READY"></div>
-            </div>
+        <div class="tv-current-queue" id="currentQueue">
+          <h3>🔔 คิวพร้อมเสิร์ฟ</h3>
+          <div class="tv-current-queue-number" id="currentQueueNumber">
+            <span class="tv-current-queue-empty">-</span>
+          </div>
         </div>
+        <div class="tv-qr-box">
+          <img src="https://thanvasu.com/CRM/161/QR/CTW.jpg" alt="QR Code" />
+          <h3>สแกนเพื่อสั่งเครื่องดื่ม</h3>
+        </div>
+      </div>
+
+      <hr class="tv-divider" />
+
+      <div class="tv-bottom-row">
+        <div class="status-page-box">
+          <h2 class="status-title waiting">รอดำเนินการ</h2>
+          <div class="grid-3x3" id="grid-WAITING"></div>
+        </div>
+        <div class="status-page-box">
+          <h2 class="status-title ready">พร้อมเสิร์ฟ</h2>
+          <div class="grid-3x3" id="grid-READY"></div>
+        </div>
+      </div>
     </div>
 
     <script>
-        console.log("🚀 TV.HTML SCRIPT LOADED!");
+      console.log("🚀 TV.HTML SCRIPT LOADED!");
 
-        const API_BASE = "https://api-q-gongcha.thanvasupos.com/api/queue";
-        const TTS_API = "https://api-q-gongcha.thanvasupos.com"; // TTS API on same server
-        const pathMatch = window.location.pathname.match(/\/rest\/(\w+)\/tv/);
-        const restId = pathMatch ? pathMatch[1] : "1";
-        let lastCalledQueue = null; // เก็บคิวล่าสุดที่เรียกแล้ว
+      const API_BASE = "https://api-q-DuckieDoze.thanvasupos.com/api/queue";
+      const TTS_API = "https://api-q-DuckieDoze.thanvasupos.com"; // TTS API on same server
+      const pathMatch = window.location.pathname.match(/\/rest\/(\w+)\/tv/);
+      const restId = pathMatch ? pathMatch[1] : "1";
+      let lastCalledQueue = null; // เก็บคิวล่าสุดที่เรียกแล้ว
 
-        console.log("📍 Using restId:", restId);
-        console.log("🔊 TTS API:", TTS_API);
-        console.log("🌐 Current URL:", window.location.href);
+      console.log("📍 Using restId:", restId);
+      console.log("🔊 TTS API:", TTS_API);
+      console.log("🌐 Current URL:", window.location.href);
 
-        async function loadQueueData() {
-            try {
-                const loginRes = await fetch(`${API_BASE}/login`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ RestID: restId })
-                });
+      async function loadQueueData() {
+        try {
+          const loginRes = await fetch(`${API_BASE}/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ RestID: restId }),
+          });
 
-                if (!loginRes.ok) throw new Error(`Login failed (${loginRes.status})`);
-                const loginData = await loginRes.json();
-                const token = loginData?.data?.token || loginData?.token;
-                if (!token) throw new Error("Missing token from login response");
+          if (!loginRes.ok)
+            throw new Error(`Login failed (${loginRes.status})`);
+          const loginData = await loginRes.json();
+          const token = loginData?.data?.token || loginData?.token;
+          if (!token) throw new Error("Missing token from login response");
 
-                const res = await fetch(`${API_BASE}/execute-jwt`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        token: token
-                        // ไม่ส่ง QueStatus เพื่อดึงทุก status (เหมือน index.html)
-                    })
-                });
+          const res = await fetch(`${API_BASE}/execute-jwt`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              token: token,
+              // ไม่ส่ง QueStatus เพื่อดึงทุก status (เหมือน index.html)
+            }),
+          });
 
-                if (!res.ok) throw new Error(`Execute-jwt failed (${res.status})`);
-                const data = await res.json();
-                console.log("📦 Full API response:", data);
+          if (!res.ok) throw new Error(`Execute-jwt failed (${res.status})`);
+          const data = await res.json();
+          console.log("📦 Full API response:", data);
 
-                const queues = data?.data?.queueData || [];
-                console.log("✅ Queue loaded:", queues.length, "items");
-                console.log("📊 All queues:", queues);
-                console.log("📊 Sample queue:", queues[0]);
+          const queues = data?.data?.queueData || [];
+          console.log("✅ Queue loaded:", queues.length, "items");
+          console.log("📊 All queues:", queues);
+          console.log("📊 Sample queue:", queues[0]);
 
-                renderFromData(queues);
-            } catch (err) {
-                console.error("❌ Load Queue Error:", err);
-                document.getElementById("grid-WAITING").innerHTML =
-                    `<div style="grid-column: span 3; text-align:center; color:#999;">ไม่สามารถโหลดข้อมูลคิวได้</div>`;
-                document.getElementById("grid-READY").innerHTML =
-                    `<div style="grid-column: span 3; text-align:center; color:#999;">ไม่สามารถโหลดข้อมูลคิวได้</div>`;
-            }
+          renderFromData(queues);
+        } catch (err) {
+          console.error("❌ Load Queue Error:", err);
+          document.getElementById(
+            "grid-WAITING"
+          ).innerHTML = `<div style="grid-column: span 3; text-align:center; color:#999;">ไม่สามารถโหลดข้อมูลคิวได้</div>`;
+          document.getElementById(
+            "grid-READY"
+          ).innerHTML = `<div style="grid-column: span 3; text-align:center; color:#999;">ไม่สามารถโหลดข้อมูลคิวได้</div>`;
         }
+      }
 
-        function renderFromData(queues) {
-            console.log("📊 Total queues received:", queues.length);
+      function renderFromData(queues) {
+        console.log("📊 Total queues received:", queues.length);
 
-            const sortedQueues = [...queues].sort((a, b) => {
-                const numA = parseInt((a.QueName || '').replace(/\D/g, '')) || 0;
-                const numB = parseInt((b.QueName || '').replace(/\D/g, '')) || 0;
-                return numB - numA;
-            });
+        const sortedQueues = [...queues].sort((a, b) => {
+          const numA = parseInt((a.QueName || "").replace(/\D/g, "")) || 0;
+          const numB = parseInt((b.QueName || "").replace(/\D/g, "")) || 0;
+          return numB - numA;
+        });
 
-            // กรองคิว Ready
-            const ready = sortedQueues.filter(q => q.QueStatus?.toLowerCase() === "ready");
+        // กรองคิว Ready
+        const ready = sortedQueues.filter(
+          (q) => q.QueStatus?.toLowerCase() === "ready"
+        );
 
-            // กรองคิวที่ไม่ใช่ Ready (แสดงทุก status อื่นๆ)
-            const waiting = sortedQueues.filter(q => q.QueStatus?.toLowerCase() !== "ready");
+        // กรองคิวที่ไม่ใช่ Ready (แสดงทุก status อื่นๆ)
+        const waiting = sortedQueues.filter(
+          (q) => q.QueStatus?.toLowerCase() !== "ready"
+        );
 
-            console.log("📊 Ready queues:", ready.length);
-            console.log("📊 Waiting queues:", waiting.length);
+        console.log("📊 Ready queues:", ready.length);
+        console.log("📊 Waiting queues:", waiting.length);
 
-            // แสดงคิวพร้อมเสิร์ฟล่าสุด (ถ้าไม่มี Ready ให้แสดงคิวล่าสุดแทน)
-            renderCurrentQueue(ready.length > 0 ? ready : sortedQueues.slice(0, 1));
+        // แสดงคิวพร้อมเสิร์ฟล่าสุด (ถ้าไม่มี Ready ให้แสดงคิวล่าสุดแทน)
+        renderCurrentQueue(ready.length > 0 ? ready : sortedQueues.slice(0, 1));
 
-            renderGrid(waiting, "grid-WAITING");
-            renderGrid(ready, "grid-READY");
-        }
+        renderGrid(waiting, "grid-WAITING");
+        renderGrid(ready, "grid-READY");
+      }
 
-        function renderCurrentQueue(readyQueues) {
-            const currentQueueEl = document.getElementById("currentQueueNumber");
+      function renderCurrentQueue(readyQueues) {
+        const currentQueueEl = document.getElementById("currentQueueNumber");
 
-            if (readyQueues.length > 0) {
-                const latestQueue = readyQueues[0]; // เอาคิวล่าสุด (เรียงจากมากไปน้อยแล้ว)
-                const zoneInitial = latestQueue.ZoneName ? latestQueue.ZoneName.charAt(0).toUpperCase() : "";
+        if (readyQueues.length > 0) {
+          const latestQueue = readyQueues[0]; // เอาคิวล่าสุด (เรียงจากมากไปน้อยแล้ว)
+          const zoneInitial = latestQueue.ZoneName
+            ? latestQueue.ZoneName.charAt(0).toUpperCase()
+            : "";
 
-                currentQueueEl.innerHTML = `
+          currentQueueEl.innerHTML = `
                     <span class="zone-initial">${zoneInitial}</span>${latestQueue.QueName}
                 `;
 
-                // ✅ เรียกเสียงถ้าเป็นคิวใหม่
-                if (lastCalledQueue !== latestQueue.QueName) {
-                    lastCalledQueue = latestQueue.QueName;
-                    callQueueVoice(latestQueue.QueName);
-                }
-            } else {
-                currentQueueEl.innerHTML = `<span class="tv-current-queue-empty">-</span>`;
-            }
+          // ✅ เรียกเสียงถ้าเป็นคิวใหม่
+          if (lastCalledQueue !== latestQueue.QueName) {
+            lastCalledQueue = latestQueue.QueName;
+            callQueueVoice(latestQueue.QueName);
+          }
+        } else {
+          currentQueueEl.innerHTML = `<span class="tv-current-queue-empty">-</span>`;
         }
+      }
 
-        // ✅ ฟังก์ชันเรียกเสียงคิว
-        async function callQueueVoice(queueNumber) {
-            try {
-                const queueText = `คิว ${queueNumber}`;
-                console.log(`🔊 เรียกเสียง: ${queueText}`);
+      // ✅ ฟังก์ชันเรียกเสียงคิว
+      async function callQueueVoice(queueNumber) {
+        try {
+          const queueText = `คิว ${queueNumber}`;
+          console.log(`🔊 เรียกเสียง: ${queueText}`);
 
-                const res = await fetch(`${TTS_API}/api/callQueue`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        queueText: queueText
-                        // force จะใช้ค่า default จาก ENV (TTS_FORCE_RELOAD)
-                    })
-                });
+          const res = await fetch(`${TTS_API}/api/callQueue`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              queueText: queueText,
+              // force จะใช้ค่า default จาก ENV (TTS_FORCE_RELOAD)
+            }),
+          });
 
-                if (!res.ok) {
-                    console.warn(`⚠️  TTS API Error: ${res.status} - กรุณาเปิด TTS Server ที่ port 10001`);
-                    return;
-                }
+          if (!res.ok) {
+            console.warn(
+              `⚠️  TTS API Error: ${res.status} - กรุณาเปิด TTS Server ที่ port 10001`
+            );
+            return;
+          }
 
-                const data = await res.json();
+          const data = await res.json();
 
-                if (data.success && data.audioUrl) {
-                    const audioUrl = `${TTS_API}${data.audioUrl}`;
-                    const audio = new Audio(audioUrl);
-                    audio.volume = 1.0; // เสียงเต็ม
+          if (data.success && data.audioUrl) {
+            const audioUrl = `${TTS_API}${data.audioUrl}`;
+            const audio = new Audio(audioUrl);
+            audio.volume = 1.0; // เสียงเต็ม
 
-                    // พยายามเล่นเสียง
-                    audio.play().then(() => {
-                        console.log(`✅ เล่นเสียง: ${queueText} (cached: ${!data.reloaded})`);
-                    }).catch(err => {
-                        console.warn('⚠️  ไม่สามารถเล่นเสียงอัตโนมัติ:', err.message);
-                        console.warn('💡 กรุณาคลิกที่หน้าเว็บเพื่อเปิดใช้งานเสียง');
-                    });
-                } else {
-                    console.warn('⚠️  TTS API ไม่ส่ง audioUrl กลับมา');
-                }
-            } catch (err) {
-                console.error('❌ เรียกเสียงล้มเหลว:', err.message);
-                console.warn('💡 กรุณาตรวจสอบว่า TTS Server รันอยู่ที่: ' + TTS_API);
-            }
+            // พยายามเล่นเสียง
+            audio
+              .play()
+              .then(() => {
+                console.log(
+                  `✅ เล่นเสียง: ${queueText} (cached: ${!data.reloaded})`
+                );
+              })
+              .catch((err) => {
+                console.warn("⚠️  ไม่สามารถเล่นเสียงอัตโนมัติ:", err.message);
+                console.warn("💡 กรุณาคลิกที่หน้าเว็บเพื่อเปิดใช้งานเสียง");
+              });
+          } else {
+            console.warn("⚠️  TTS API ไม่ส่ง audioUrl กลับมา");
+          }
+        } catch (err) {
+          console.error("❌ เรียกเสียงล้มเหลว:", err.message);
+          console.warn("💡 กรุณาตรวจสอบว่า TTS Server รันอยู่ที่: " + TTS_API);
         }
+      }
 
-        function renderGrid(data, id) {
-            const grid = document.getElementById(id);
-            const maxDisplay = 15; // แสดงสูงสุด 15 คิว (5 แถว x 3 คอลัมน์)
+      function renderGrid(data, id) {
+        const grid = document.getElementById(id);
+        const maxDisplay = 15; // แสดงสูงสุด 15 คิว (5 แถว x 3 คอลัมน์)
 
-            grid.innerHTML = data.length
-                ? data.slice(0, maxDisplay)
-                    .map(q => {
-                        const zoneInitial = q.ZoneName ? q.ZoneName.charAt(0).toUpperCase() : "";
-                        const statusClass = q.QueStatus?.toLowerCase() === "ready" ? "ready" : "waiting";
-                        return `
+        grid.innerHTML = data.length
+          ? data
+              .slice(0, maxDisplay)
+              .map((q) => {
+                const zoneInitial = q.ZoneName
+                  ? q.ZoneName.charAt(0).toUpperCase()
+                  : "";
+                const statusClass =
+                  q.QueStatus?.toLowerCase() === "ready" ? "ready" : "waiting";
+                return `
                 <div class="queue-card-large ${statusClass}">
                   <div class="queue-number">
                     <span class="zone-initial">${zoneInitial}</span>${q.QueName}
                   </div>
                 </div>`;
-                    })
-                    .join("")
-                : `<div style="grid-column: span 3; text-align:center; color:#999;">ไม่มีข้อมูลคิว</div>`;
-        }
+              })
+              .join("")
+          : `<div style="grid-column: span 3; text-align:center; color:#999;">ไม่มีข้อมูลคิว</div>`;
+      }
 
-        // ✅ Enable autoplay โดยสร้าง silent audio context
-        function enableAutoplay() {
-            const silentAudio = new Audio();
-            silentAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADhAC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAA4T/////////////////////////////////////////////////';
-            silentAudio.volume = 0;
-            silentAudio.play().then(() => {
-                console.log('✅ Autoplay enabled');
-            }).catch(() => {
-                console.log('⚠️  Autoplay blocked - user interaction required');
-            });
-        }
+      // ✅ Enable autoplay โดยสร้าง silent audio context
+      function enableAutoplay() {
+        const silentAudio = new Audio();
+        silentAudio.src =
+          "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADhAC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAA4T/////////////////////////////////////////////////";
+        silentAudio.volume = 0;
+        silentAudio
+          .play()
+          .then(() => {
+            console.log("✅ Autoplay enabled");
+          })
+          .catch(() => {
+            console.log("⚠️  Autoplay blocked - user interaction required");
+          });
+      }
 
-        // เรียกใช้ทันทีเมื่อโหลดหน้า
-        enableAutoplay();
+      // เรียกใช้ทันทีเมื่อโหลดหน้า
+      enableAutoplay();
 
-        // ลองอีกครั้งเมื่อ user interact
-        document.addEventListener('click', enableAutoplay, { once: true });
-        document.addEventListener('touchstart', enableAutoplay, { once: true });
+      // ลองอีกครั้งเมื่อ user interact
+      document.addEventListener("click", enableAutoplay, { once: true });
+      document.addEventListener("touchstart", enableAutoplay, { once: true });
 
-        loadQueueData();
-        setInterval(loadQueueData, 15000);
+      loadQueueData();
+      setInterval(loadQueueData, 15000);
     </script>
-</body>
-
+  </body>
 </html>

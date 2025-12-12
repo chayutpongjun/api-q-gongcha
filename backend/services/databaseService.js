@@ -92,7 +92,7 @@ class DatabaseService {
                [RestDBName],
                [RestUserName],
                [RestPassword]
-        FROM [CFS_Gongcha_Main].[dbo].[Tbl_Rest]
+        FROM [CFS_DuckieDoze_Main].[dbo].[Tbl_Rest]
         WHERE [RestID] = @RestId
       `);
 
@@ -393,7 +393,7 @@ class DatabaseService {
                [RestDBName],
                [RestUserName],
                [RestPassword]
-        FROM [CFS_Gongcha_Main].[dbo].[Tbl_Rest]
+        FROM [CFS_DuckieDoze_Main].[dbo].[Tbl_Rest]
         WHERE [RestID] = @RestId
       `);
 
